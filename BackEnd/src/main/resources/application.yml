@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: OmniSource
+  datasource:
+    url: "jdbc:mysql://118.190.206.152:3306/omni-source?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true"
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: 118.190.206.152
+      port: 6379
+      password:
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# JWT配置
+jwt:
+  # JWT密钥（生产环境请使用环境变量或配置中心）
+  secret: T21uaVNvdXJjZVNlY3JldEtleTIwMjZGb3JKV1RHZW5lcmF0aW9uQW5kVmFsaWRhdGlvbg==
+  # Access Token有效期（毫秒，默认2小时）
+  access-token-expiration: 7200000
+  # Refresh Token有效期（毫秒，默认7天）
+  refresh-token-expiration: 604800000
+
+# MyBatis配置
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath:mapper/*.xml

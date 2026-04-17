@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean *)",
+      "Bash(grep -E \"^/.*:$|\\\\.java$\")",
+      "Bash(mkdir -p BackEnd)",
+      "Bash(git mv *)",
+      "Bash(git add *)"
+    ]
+  }
+}
