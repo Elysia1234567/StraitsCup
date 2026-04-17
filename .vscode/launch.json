@@ -6,6 +6,19 @@
     "configurations": [
         {
             "type": "java",
+            "name": "LLMAPITest",
+            "request": "launch",
+            "mainClass": "LLMAPITest",
+            "projectName": "StraitsCup_14eadeee"
+        },
+        {
+            "type": "java",
+            "name": "Launch Java Program",
+            "request": "launch",
+            "mainClass": ""
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}"

@@ -6,14 +6,11 @@ import java.net.http.HttpResponse;
 public class LLMAPITest {
 	public static void main(String[] args) {
 		try {
-			String apiKey = System.getenv("SPRINTAI_API_KEY");
-			if (apiKey == null || apiKey.isEmpty()) {
-				System.err.println("请先设置环境变量 SPRINTAI_API_KEY（你的 SprintAI API Key）");
-				System.exit(1);
-			}
-
-			String endpoint = "https://api.sprintai.com/v1/chat/completions";
-			String model = "qianwen-1"; // 根据 SprintAI 文档调整模型名
+			// 将 API Key 与 Base URL 直接写入文件（替换下面的占位符为你的实际值）
+			String apiKey = "sk-a83fcef78af344cda2b94c0500c15fce"; // <- 替换为你的真实 API Key
+			String baseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1"; // <- 如需自定义 base URL，请修改
+			String endpoint = baseUrl + "/chat/completions";
+			String model = "qwen3.6-flash"; // 根据 SprintAI 文档调整模型名
 			String userPrompt = "请用中文说: HelloWorld";
 
 			String jsonBody = "{"
