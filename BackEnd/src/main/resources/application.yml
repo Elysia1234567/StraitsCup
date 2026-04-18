@@ -1,6 +1,15 @@
 spring:
   application:
     name: OmniSource
+  ai:
+    openai:
+      api-key: ${qianwen.api-key}
+      base-url: ${qianwen.base-url}
+      chat:
+        options:
+          model: ${qianwen.model}
+          temperature: 0.7
+          max-tokens: 2000
   datasource:
     url: "jdbc:mysql://118.190.206.152:3306/omni-source?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true"
     username: root
@@ -34,3 +43,9 @@ mybatis:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   mapper-locations: classpath:mapper/*.xml
+
+# 千问API配置
+qianwen:
+  api-key: sk-a83fcef78af344cda2b94c0500c15fce
+  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  model: qwen-plus

@@ -9,7 +9,13 @@ import com.omnisource.dto.response.TokenResponse;
 import com.omnisource.entity.User;
 import com.omnisource.enums.UserRole;
 import com.omnisource.enums.UserStatus;
+import com.omnisource.exception.AccountDisabledException;
 import com.omnisource.exception.BusinessException;
+import com.omnisource.exception.CommonErrorCode;
+import com.omnisource.exception.TokenExpiredException;
+import com.omnisource.exception.TokenInvalidException;
+import com.omnisource.exception.UserAlreadyExistsException;
+import com.omnisource.exception.UserNotFoundException;
 import com.omnisource.mapper.UserMapper;
 import com.omnisource.service.AuthService;
 import com.omnisource.utils.JwtUtil;
@@ -45,13 +51,13 @@ public class AuthServiceImpl implements AuthService {
     public RegisterResponse register(RegisterRequest request) {
         // 检查用户名是否已存在
         if (userMapper.countByUsername(request.getUsername()) > 0) {
-            throw new BusinessException(400, "用户名已存在");
+            throw new UserAlreadyExistsException("username", request.getUsername());
         }
 
         // 检查邮箱是否已存在
         if (request.getEmail() != null && !request.getEmail().isEmpty()) {
             if (userMapper.countByEmail(request.getEmail()) > 0) {
-                throw new BusinessException(400, "邮箱已被注册");
+                throw new UserAlreadyExistsException("email", request.getEmail());
             }
         }
 
@@ -91,17 +97,17 @@ public class AuthServiceImpl implements AuthService {
         // 查询用户
         User user = userMapper.selectByUsername(request.getUsername());
         if (user == null) {
-            throw new BusinessException(401, "用户名或密码错误");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
 
         // 检查用户状态
         if (user.getStatus() != UserStatus.ENABLED.getCode()) {
-            throw new BusinessException(403, "账号已被禁用");
+            throw new AccountDisabledException(user.getUsername());
         }
 
         // 验证密码
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException(401, "用户名或密码错误");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
 
         // 生成Token
@@ -156,13 +162,13 @@ public class AuthServiceImpl implements AuthService {
 
         // 验证Refresh Token是否有效
         if (!jwtUtil.validateToken(refreshToken)) {
-            throw new BusinessException(401, "刷新令牌已过期或无效");
+            throw new TokenInvalidException("刷新令牌已过期或无效");
         }
 
         // 检查是否在黑名单中
         Boolean isBlacklisted = redisTemplate.hasKey(REFRESH_TOKEN_BLACKLIST_PREFIX + refreshToken);
         if (Boolean.TRUE.equals(isBlacklisted)) {
-            throw new BusinessException(401, "刷新令牌已被注销");
+            throw new TokenInvalidException("刷新令牌已被注销");
         }
 
         // 获取Token中的用户信息
@@ -172,17 +178,17 @@ public class AuthServiceImpl implements AuthService {
         // 查询用户
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new BusinessException(401, "用户不存在");
+            throw new UserNotFoundException(userId);
         }
 
         // 检查用户状态
         if (user.getStatus() != UserStatus.ENABLED.getCode()) {
-            throw new BusinessException(403, "账号已被禁用");
+            throw new AccountDisabledException(user.getUsername());
         }
 
         // 验证Token版本（如果修改过密码，旧Token应该失效）
         if (!user.getTokenVersion().equals(tokenVersion)) {
-            throw new BusinessException(401, "登录状态已过期，请重新登录");
+            throw new TokenExpiredException("登录状态已过期，请重新登录");
         }
 
         // 将旧的Refresh Token加入黑名单
