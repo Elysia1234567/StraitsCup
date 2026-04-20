@@ -25,13 +25,14 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         // 群聊端点
+        // 开发环境用 * 允许所有来源，生产环境需要配置具体域名
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .addInterceptors(handshakeInterceptor)
-                .setAllowedOrigins("https://your-frontend-domain.com"); // TODO: 需要前端提供具体域名或地址
+                .setAllowedOrigins("*");
 
         // 流式 AI 响应端点
         registry.addHandler(streamWebSocketHandler, "/ws/stream")
                 .addInterceptors(handshakeInterceptor)
-                .setAllowedOrigins("https://your-frontend-domain.com"); // TODO: 需要前端提供具体域名或地址
+                .setAllowedOrigins("*");
     }
 }

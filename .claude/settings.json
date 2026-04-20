@@ -3,6 +3,9 @@
     "allow": [
       "Bash(xargs grep *)",
       "Read(//d:/Junior/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\20503\\.claude\\plans"
     ]
   }
 }

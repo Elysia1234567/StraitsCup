@@ -11,8 +11,8 @@ spring:
           temperature: 0.7
           max-tokens: 2000
   datasource:
-    url: "jdbc:mysql://118.190.206.152:3306/omni-source?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true"
-    username: root
+    url: "jdbc:mysql://118.190.206.152:3306/omni_source?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true"
+    username: omni
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
