@@ -47,5 +47,5 @@ mybatis:
 # 千问API配置
 qianwen:
   api-key: sk-a83fcef78af344cda2b94c0500c15fce
-  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  base-url: https://dashscope.aliyuncs.com/compatible-mode
   model: qwen-plus

@@ -65,6 +65,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 允许匿名访问的接口
                         .requestMatchers("/api/auth/**").permitAll()
+                        // 🌟在这里加上下面这一行，表示 /api/aigc/ 下的所有接口不用登录🌟
+                        .requestMatchers("/api/aigc/**").permitAll()
                         // OPTIONS请求允许所有
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // 其他接口需要认证
