@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: OmniSource
@@ -49,3 +52,8 @@ qianwen:
   api-key: sk-a83fcef78af344cda2b94c0500c15fce
   base-url: https://dashscope.aliyuncs.com/compatible-mode
   model: qwen-plus
+
+# RAG知识库配置
+rag:
+  dataset-path: Util/standardList.jsonl
+  default-top-k: 3

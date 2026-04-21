@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "OmniSourceApplication",
+            "request": "launch",
+            "mainClass": "com.omnisource.OmniSourceApplication",
+            "projectName": "OmniSource"
+        },
+        {
+            "type": "java",
             "name": "LLMAPITest",
             "request": "launch",
             "mainClass": "LLMAPITest",
