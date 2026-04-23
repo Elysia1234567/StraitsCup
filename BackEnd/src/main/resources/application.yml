@@ -57,3 +57,10 @@ qianwen:
 rag:
   dataset-path: Util/standardList.jsonl
   default-top-k: 3
+
+milvus:
+  host: localhost  # 或你的服务器IP
+  port: 19530
+  username: ""     # 默认无用户名
+  password: ""     # 默认无密码
+  database: default
