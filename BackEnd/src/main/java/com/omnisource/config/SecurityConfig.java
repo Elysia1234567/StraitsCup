@@ -64,7 +64,7 @@ public class SecurityConfig {
                 // 配置请求授权
                 .authorizeHttpRequests(auth -> auth
                        // 允许匿名访问的接口（增加 /ws/** 放行）
-                    .requestMatchers("/api/auth/**", "/api/aigc/**", "/api/rag/**", "/ws/**").permitAll()
+                    .requestMatchers("/api/auth/**", "/api/aigc/**", "/api/rag/**", "/api/chat/**", "/ws/**").permitAll()
                         // OPTIONS请求允许所有
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // 其他接口需要认证
