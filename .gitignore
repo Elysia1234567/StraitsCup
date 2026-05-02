@@ -19,6 +19,11 @@ out/
 logs/
 *.log
 
+# Local secrets
+.env
+.env.*
+!.env.example
+
 # OS
 .DS_Store
 Thumbs.db
@@ -27,6 +32,3 @@ Thumbs.db
 *.tmp
 *.swp
 *~
-
-# Local private config
-BackEnd/src/main/resources/application-local.yml

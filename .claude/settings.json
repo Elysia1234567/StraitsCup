@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(xargs grep *)",
-      "Read(//d:/Junior/**)"
+      "Read(//d:/Junior/**)",
+      "Bash(git -C d:/Junior/OmniSource log --oneline -20)",
+      "Read(//d/d/Junior/OmniSource/**)",
+      "Read(//d//**)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Read(//c/Users/20503/**)",
+      "Bash(cmd.exe /C \"cd /d d:\\\\Junior\\\\OmniSource\\\\BackEnd && mvn clean compile -DskipTests -Dmaven.repo.local=.m2/repository 2>&1\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\20503\\.claude\\plans"

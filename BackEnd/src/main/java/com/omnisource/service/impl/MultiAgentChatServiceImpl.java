@@ -1,12 +1,16 @@
 package com.omnisource.service.impl;
 
+import com.omnisource.Agents.AgentDefaults;
+import com.omnisource.Agents.AgentPromptBuilder;
 import com.omnisource.dto.request.MultiAgentChatRequest;
 import com.omnisource.dto.response.AgentReplyResponse;
 import com.omnisource.dto.response.MultiAgentChatResponse;
 import com.omnisource.dto.response.RagRetrievalResponse;
-import com.omnisource.enums.AgentRole;
+import com.omnisource.entity.Agent;
+import com.omnisource.service.AgentService;
 import com.omnisource.service.MultiAgentChatService;
 import com.omnisource.service.RagService;
+import com.omnisource.service.TavilySearchService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
@@ -14,7 +18,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,54 +26,84 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * 多智能体聊天基础实现。
+ * 数据库驱动的多器灵聊天实现。
  */
 @Service
 public class MultiAgentChatServiceImpl implements MultiAgentChatService {
 
-    private static final List<AgentRole> DEFAULT_ROLES = Arrays.asList(
-            AgentRole.HISTORIAN,
-            AgentRole.CRAFTSMAN,
-            AgentRole.TOURIST
-    );
-
     private final ChatClient chatClient;
     private final RagService ragService;
+    private final AgentService agentService;
+    private final TavilySearchService tavilySearchService;
+    private final AgentPromptBuilder agentPromptBuilder;
     private final Map<String, MultiAgentChatResponse> sessionStore = new ConcurrentHashMap<>();
 
-    public MultiAgentChatServiceImpl(ChatModel chatModel, RagService ragService) {
+    /**
+     * 创建多器灵聊天服务。
+     *
+     * @param chatModel Spring AI 聊天模型，用于调用大模型生成 Agent 回复
+     * @param ragService RAG 检索服务，用于根据用户问题查询知识库资料
+     * @param agentService Agent 数据服务，用于从数据库读取 Agent 配置
+     * @param tavilySearchService 联网搜索服务，用于在用户允许时补充互联网资料
+     * @param agentPromptBuilder Agent 提示词构建器，用于拼装人设、问题和 RAG 资料
+     */
+    public MultiAgentChatServiceImpl(
+            ChatModel chatModel,
+            RagService ragService,
+            AgentService agentService,
+            TavilySearchService tavilySearchService,
+            AgentPromptBuilder agentPromptBuilder) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.ragService = ragService;
+        this.agentService = agentService;
+        this.tavilySearchService = tavilySearchService;
+        this.agentPromptBuilder = agentPromptBuilder;
     }
 
+    /**
+     * 执行一次多 Agent 问答。
+     *
+     * @param request 用户请求，包含问题、文物主题、检索数量和指定 Agent 编码
+     * @return 多个 Agent 的独立回复、聚合回复和 RAG 检索结果
+     */
     @Override
     public MultiAgentChatResponse chat(MultiAgentChatRequest request) {
         String sessionId = StringUtils.hasText(request.getSessionId())
                 ? request.getSessionId().trim()
                 : "sess_" + UUID.randomUUID();
         int topK = request.getTopK() != null && request.getTopK() > 0 ? request.getTopK() : 3;
-        List<AgentRole> roles = CollectionUtils.isEmpty(request.getAgentRoles()) ? DEFAULT_ROLES : request.getAgentRoles();
 
-        List<RagRetrievalResponse> retrievals = ragService.retrieve(request.getQuery(), topK);
+        List<Agent> agents = resolveAgents(request.getAgentCodes());
+        List<RagRetrievalResponse> retrievals = needsRag(agents) ? ragService.retrieve(request.getQuery(), topK) : List.of();
+        String webSearchResult = shouldUseWebSearch(request, agents)
+                ? tavilySearchService.searchAndFormat(request.getQuery())
+                : null;
         List<AgentReplyResponse> agentReplies = new ArrayList<>();
 
-        for (AgentRole role : roles) {
-            agentReplies.add(buildAgentReply(role, request, retrievals));
+        for (Agent agent : agents) {
+            agentReplies.add(buildAgentReply(agent, request, retrievals, webSearchResult));
         }
 
         MultiAgentChatResponse response = MultiAgentChatResponse.builder()
                 .sessionId(sessionId)
                 .query(request.getQuery())
                 .heritageId(request.getHeritageId())
-                .finalAnswer(buildFinalAnswer(agentReplies))
+                .finalAnswer(agentPromptBuilder.buildFinalAnswer(agentReplies))
                 .agentReplies(agentReplies)
                 .retrievals(retrievals)
+                .webSearchResult(webSearchResult)
                 .build();
 
         sessionStore.put(sessionId, response);
         return response;
     }
 
+    /**
+     * 查询会话最近一次问答结果。
+     *
+     * @param sessionId 会话 ID，由 chat 方法自动生成或由前端传入
+     * @return 会话最近一次结果，不存在时返回 null
+     */
     @Override
     public MultiAgentChatResponse getSessionResult(String sessionId) {
         if (!StringUtils.hasText(sessionId)) {
@@ -78,114 +112,81 @@ public class MultiAgentChatServiceImpl implements MultiAgentChatService {
         return sessionStore.get(sessionId.trim());
     }
 
+    /**
+     * 解析本轮要参与回答的 Agent。
+     *
+     * @param requestedCodes 前端指定的 Agent 编码列表，为空时使用默认器灵
+     * @return 可用的 Agent 配置列表
+     */
+    private List<Agent> resolveAgents(List<String> requestedCodes) {
+        List<String> codes = CollectionUtils.isEmpty(requestedCodes) ? AgentDefaults.DEFAULT_AGENT_CODES : requestedCodes;
+        LinkedHashSet<String> uniqueCodes = codes.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<Agent> agents = uniqueCodes.stream()
+                .map(agentService::getAgentByCode)
+                .filter(agent -> agent != null && (agent.getStatus() == null || agent.getStatus() == 1))
+                .toList();
+
+        if (!agents.isEmpty()) {
+            return agents;
+        }
+        return agentService.getAllActiveAgents().stream().limit(2).toList();
+    }
+
+    /**
+     * 判断本轮是否至少有一个 Agent 需要 RAG。
+     *
+     * @param agents 本轮参与回答的 Agent 列表
+     * @return true 表示需要执行 RAG 检索，false 表示可以完全跳过检索
+     */
+    private boolean needsRag(List<Agent> agents) {
+        return agents.stream().anyMatch(agent -> !agentPromptBuilder.shouldSkipRag(agent));
+    }
+
+    /**
+     * 判断本轮是否需要联网搜索。
+     *
+     * @param request 用户聊天请求，searchEnabled 为 true 时才允许联网
+     * @param agents 本轮参与回答的 Agent 列表
+     * @return true 表示执行联网搜索；NO_RAG Agent 不会触发联网搜索
+     */
+    private boolean shouldUseWebSearch(MultiAgentChatRequest request, List<Agent> agents) {
+        return Boolean.TRUE.equals(request.getSearchEnabled()) && needsRag(agents);
+    }
+
+    /**
+     * 构建并调用单个 Agent 的回复。
+     *
+     * @param agent 当前要回答的 Agent 配置
+     * @param request 用户聊天请求
+     * @param retrievals 本轮 RAG 检索资料
+     * @param webSearchResult 本轮联网搜索补充资料
+     * @return 单个 Agent 的回复结果
+     */
     private AgentReplyResponse buildAgentReply(
-            AgentRole role,
+            Agent agent,
             MultiAgentChatRequest request,
-            List<RagRetrievalResponse> retrievals
+            List<RagRetrievalResponse> retrievals,
+            String webSearchResult
     ) {
+        boolean skipRag = agentPromptBuilder.shouldSkipRag(agent);
+        List<RagRetrievalResponse> agentRetrievals = skipRag ? List.of() : retrievals;
+        String agentWebSearchResult = skipRag ? null : webSearchResult;
+
         String content = chatClient.prompt()
-                .user(buildRolePrompt(role, request, retrievals))
+                .user(agentPromptBuilder.buildAgentPrompt(agent, request, agentRetrievals, agentWebSearchResult))
                 .call()
                 .content();
 
         return AgentReplyResponse.builder()
-                .role(role)
-                .title(role.getTitle())
+                .agentCode(agent.getAgentCode())
+                .title(agent.getName())
                 .content(content)
-                .references(retrievals.stream().map(RagRetrievalResponse::getId).collect(Collectors.toList()))
+                .references(agentRetrievals.stream().map(RagRetrievalResponse::getId).collect(Collectors.toList()))
+                .searchUsed(StringUtils.hasText(agentWebSearchResult))
                 .build();
-    }
-
-    private String buildRolePrompt(
-            AgentRole role,
-            MultiAgentChatRequest request,
-            List<RagRetrievalResponse> retrievals
-    ) {
-        String heritageHint = StringUtils.hasText(request.getHeritageId())
-                ? "目标非遗项目 ID：" + request.getHeritageId()
-                : "目标非遗项目 ID：未指定";
-
-        String references = buildReferenceText(retrievals);
-
-        return """
-                你是一个非遗文化多智能体系统中的角色 Agent。
-                你必须优先依据【检索资料】回答，不得编造事实；如果资料不足，请明确说明不确定。
-
-                【角色要求】
-                %s
-
-                【任务信息】
-                %s
-
-                【用户问题】
-                %s
-
-                【检索资料】
-                %s
-
-                【输出要求】
-                1. 只从当前角色视角回答。
-                2. 优先使用检索资料中的信息。
-                3. 回答结尾单独追加一行：参考片段：chunkId1, chunkId2
-                4. 使用中文输出。
-                """.formatted(roleInstruction(role), heritageHint, request.getQuery(), references);
-    }
-
-    private String roleInstruction(AgentRole role) {
-        return switch (role) {
-            case HISTORIAN -> """
-                    你是“历史学家 Agent”。
-                    重点解释历史来源、文化背景、发展脉络、地域传播和文化意义。
-                    语言要严谨、克制、偏理性，不展开过细工艺教学。
-                    """;
-            case CRAFTSMAN -> """
-                    你是“匠人 Agent”。
-                    重点解释工艺步骤、材料、技法、关键工序和传承经验。
-                    语言要自然、专业、易懂，强调“怎么做”和“为什么这样做”。
-                    """;
-            case TOURIST -> """
-                    你是“游客 Agent”。
-                    重点用通俗表达解释看点、体验感、理解门槛和大众价值。
-                    语言要亲切、简洁、易懂，帮助普通用户快速理解。
-                    """;
-        };
-    }
-
-    private String buildReferenceText(List<RagRetrievalResponse> retrievals) {
-        if (CollectionUtils.isEmpty(retrievals)) {
-            return "未检索到相关资料。";
-        }
-
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < retrievals.size(); i++) {
-            RagRetrievalResponse item = retrievals.get(i);
-            builder.append("[")
-                    .append(i + 1)
-                    .append("] chunkId=")
-                    .append(item.getId())
-                    .append('\n')
-                    .append("标题：")
-                    .append(item.getTitle())
-                    .append('\n')
-                    .append("内容：")
-                    .append(item.getContent())
-                    .append('\n');
-
-            if (item.getMetadata() != null && !item.getMetadata().isEmpty()) {
-                builder.append("元数据：").append(item.getMetadata()).append('\n');
-            }
-            builder.append('\n');
-        }
-        return builder.toString().trim();
-    }
-
-    private String buildFinalAnswer(List<AgentReplyResponse> agentReplies) {
-        if (CollectionUtils.isEmpty(agentReplies)) {
-            return "当前没有可用的 Agent 回答。";
-        }
-
-        return agentReplies.stream()
-                .map(reply -> "【" + reply.getTitle() + "】\n" + reply.getContent())
-                .collect(Collectors.joining("\n\n"));
     }
 }

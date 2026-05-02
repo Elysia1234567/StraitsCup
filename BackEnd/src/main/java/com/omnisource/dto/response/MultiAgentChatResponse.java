@@ -22,4 +22,5 @@ public class MultiAgentChatResponse {
     private String finalAnswer;
     private List<AgentReplyResponse> agentReplies;
     private List<RagRetrievalResponse> retrievals;
+    private String webSearchResult;
 }

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- 从 Spring 配置中获取应用名称 -->
     <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="OmniSource"/>
@@ -51,9 +51,6 @@
 
     <!-- MyBatis 日志级别 -->
     <logger name="com.omnisource.mapper" level="DEBUG"/>
-
-    <!-- Spring Security 日志级别 -->
-    <logger name="org.springframework.security" level="INFO"/>
 
     <!-- Spring AI 日志级别 -->
     <logger name="org.springframework.ai" level="INFO"/>

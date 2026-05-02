@@ -1,6 +1,5 @@
 package com.omnisource.dto.response;
 
-import com.omnisource.enums.AgentRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,8 +16,9 @@ import java.util.List;
 @AllArgsConstructor
 public class AgentReplyResponse {
 
-    private AgentRole role;
+    private String agentCode;
     private String title;
     private String content;
     private List<String> references;
+    private Boolean searchUsed;
 }

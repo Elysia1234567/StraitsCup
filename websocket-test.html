@@ -1,392 +1,948 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniSource WebSocket 群聊测试</title>
+    <title>OmniSource - 多Agent非遗聊天测试</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
             overflow: hidden;
         }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-        }
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-        .status {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .status.connected {
-            background: #4ade80;
-            color: #065f46;
-        }
-        .status.disconnected {
-            background: #fca5a5;
-            color: #991b1b;
-        }
-        .online-count {
-            float: right;
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .controls {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
+        .container {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            height: 100vh;
         }
-        input[type="text"] {
-            flex: 1;
-            min-width: 200px;
-            padding: 10px 15px;
-            border: 2px solid #e0e0e0;
+        .sidebar {
+            width: 280px;
+            background: #16213e;
+            border-right: 1px solid #0f3460;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar h2 {
+            padding: 16px;
+            font-size: 16px;
+            color: #e94560;
+            border-bottom: 1px solid #0f3460;
+        }
+        .agent-list, .room-list {
+            padding: 12px;
+            overflow-y: auto;
+        }
+        .agent-item, .room-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: #0f3460;
             border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            font-size: 13px;
         }
-        .btn-primary {
-            background: #667eea;
-            color: white;
+        .agent-item:hover, .room-item:hover { background: #e94560; }
+        .room-item.active { background: #e94560; }
+        .agent-item .name { font-weight: bold; }
+        .agent-item .role { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
-        .btn-primary:hover {
-            background: #5a67d8;
+        .header {
+            padding: 16px 20px;
+            background: #16213e;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .btn-danger {
-            background: #ef4444;
-            color: white;
+        .header h1 { font-size: 18px; }
+        .header .status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: #0f3460;
         }
-        .btn-danger:hover {
-            background: #dc2626;
+        .header .status.connected { background: #16c79a; color: #1a1a2e; }
+        .header .status.disconnected { background: #e94560; }
+        .room-agents {
+            display: flex;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #111b33;
+            border-bottom: 1px solid #0f3460;
+            overflow-x: auto;
+            align-items: center;
         }
-        button:disabled {
-            opacity: 0.5;
+        .room-agent {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            background: #0f3460;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .room-agent select {
+            max-width: 120px;
+            background: #16213e;
+            color: #eee;
+            border: 1px solid #315b8a;
+            border-radius: 6px;
+            padding: 4px 6px;
+            font-size: 12px;
+        }
+        .icon-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 6px;
+            background: #16213e;
+            color: #eee;
+            cursor: pointer;
+        }
+        .icon-btn:disabled {
+            opacity: 0.35;
             cursor: not-allowed;
         }
+
         .messages {
-            height: 400px;
+            flex: 1;
             overflow-y: auto;
             padding: 20px;
-            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
         .message {
-            margin-bottom: 15px;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .message-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-        .sender {
-            font-weight: 600;
-            color: #333;
-        }
-        .sender.system {
-            color: #667eea;
-        }
-        .sender.agent {
-            color: #059669;
-        }
-        .time {
-            font-size: 12px;
-            color: #999;
-        }
-        .content {
-            background: white;
-            padding: 12px 15px;
+            max-width: 80%;
+            padding: 12px 16px;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            color: #333;
-            line-height: 1.5;
-        }
-        .message.system .content {
-            background: #e0e7ff;
-            color: #4338ca;
-            text-align: center;
             font-size: 14px;
-            padding: 8px 15px;
+            line-height: 1.6;
+            word-wrap: break-word;
         }
-        .message.own .content {
-            background: #667eea;
-            color: white;
+        .message.user {
+            align-self: flex-end;
+            background: #e94560;
         }
+        .message.agent {
+            align-self: flex-start;
+            background: #0f3460;
+        }
+        .message.agent.pending .content {
+            color: #aaa;
+            font-style: italic;
+        }
+        .message.system {
+            align-self: center;
+            background: transparent;
+            color: #888;
+            font-size: 12px;
+            padding: 4px 12px;
+        }
+        .message .sender {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #e94560;
+        }
+        .message.user .sender { color: #fff; }
+        .message img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+        }
+        .typing-indicator {
+            align-self: flex-start;
+            background: #0f3460;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #aaa;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
         .input-area {
-            padding: 20px;
-            border-top: 1px solid #eee;
+            padding: 16px 20px;
+            background: #16213e;
+            border-top: 1px solid #0f3460;
+        }
+        .input-row {
             display: flex;
             gap: 10px;
+            align-items: flex-end;
         }
-        .input-area input {
+        .input-area textarea {
             flex: 1;
-        }
-        .guide {
-            padding: 20px;
-            background: #fffbeb;
-            border-left: 4px solid #f59e0b;
-            margin: 20px;
+            background: #0f3460;
+            border: none;
             border-radius: 8px;
+            padding: 12px;
+            color: #eee;
+            font-size: 14px;
+            resize: none;
+            height: 60px;
+            outline: none;
         }
-        .guide h3 {
+        .input-area textarea::placeholder { color: #888; }
+        .btn {
+            padding: 10px 20px;
+            background: #e94560;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary {
+            background: #0f3460;
+            padding: 8px 14px;
+            font-size: 12px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
             margin-bottom: 10px;
-            color: #92400e;
+            align-items: center;
         }
-        .guide ol {
-            margin-left: 20px;
-            color: #78350f;
-            line-height: 1.8;
+        .toolbar label {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
         }
-        .guide code {
-            background: #fef3c7;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
+        .toolbar input[type="checkbox"] {
+            accent-color: #e94560;
+        }
+        .toolbar input[type="file"] { display: none; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 24px;
+            width: 420px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal h3 {
+            margin-bottom: 16px;
+            color: #e94560;
+        }
+        .modal input, .modal select {
+            width: 100%;
+            background: #0f3460;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #eee;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .modal .agent-select {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .modal .agent-select label {
+            padding: 6px 12px;
+            background: #0f3460;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .modal .agent-select input { display: none; }
+        .modal .agent-select input:checked + span {
+            color: #e94560;
+            font-weight: bold;
+        }
+        .modal .agent-select label:has(input:checked) {
+            background: #e9456030;
+            border: 1px solid #e94560;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #888;
+        }
+        .empty-state h2 { margin-bottom: 12px; }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #0f3460;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: #e94560;
+            transition: width 0.3s;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>OmniSource 群聊测试</h1>
-            <span id="status" class="status disconnected">未连接</span>
-            <span class="online-count">在线人数: <span id="onlineCount">0</span></span>
+        <div class="sidebar">
+            <h2>聊天室</h2>
+            <div class="room-list" id="roomList"></div>
+            <div style="padding: 12px; border-top: 1px solid #0f3460;">
+                <button class="btn" style="width: 100%;" onclick="showCreateRoom()">+ 创建聊天室</button>
+            </div>
+            <h2 style="border-top: 1px solid #0f3460;">Agent角色</h2>
+            <div class="agent-list" id="agentList"></div>
         </div>
 
-        <div class="guide">
-            <h3>使用步骤：</h3>
-            <ol>
-                <li>先调用 <code>POST /api/auth/login</code> 获取 token</li>
-                <li>复制 <code>accessToken</code> 字段的值（纯字符串，不含引号）</li>
-                <li>将 token 粘贴到下方输入框（支持自动去除 Bearer 前缀）</li>
-                <li>点击"连接"按钮建立 WebSocket 连接</li>
-                <li>连接成功后可以发送消息测试</li>
-            </ol>
-            <p style="margin-top: 10px; color: #dc2626; font-size: 13px;">
-                提示：打开浏览器开发者工具(F12)查看控制台日志，可获取详细的调试信息
-            </p>
+        <div class="main" id="mainArea">
+            <div class="empty-state">
+                <h2>OmniSource 多Agent非遗聊天</h2>
+                <p>在左侧创建一个聊天室开始体验</p>
+            </div>
         </div>
+    </div>
 
-        <div class="controls">
-            <input type="text" id="tokenInput" placeholder="粘贴 JWT Token 这里..." style="flex: 2;">
-            <button id="connectBtn" class="btn-primary" onclick="connect()">连接</button>
-            <button id="disconnectBtn" class="btn-danger" onclick="disconnect()" disabled>断开</button>
-        </div>
-
-        <div class="messages" id="messages"></div>
-
-        <div class="input-area">
-            <input type="text" id="messageInput" placeholder="输入消息..." disabled onkeypress="handleKeyPress(event)">
-            <button id="sendBtn" class="btn-primary" onclick="sendMessage()" disabled>发送</button>
+    <!-- 创建聊天室弹窗 -->
+    <div class="modal-overlay" id="createRoomModal">
+        <div class="modal">
+            <h3>创建聊天室</h3>
+            <input type="text" id="roomName" placeholder="聊天室名称（如：福建剪纸讨论室）">
+            <div class="agent-select" id="agentSelect"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideCreateRoom()">取消</button>
+                <button class="btn" onclick="createRoom()">创建</button>
+            </div>
         </div>
     </div>
 
     <script>
+        const API_BASE = 'http://localhost:8081/api';
+        const WS_BASE = 'ws://localhost:8081/ws/chat';
+        let currentRoomId = null;
         let ws = null;
-        const serverUrl = 'ws://localhost:8080/ws/chat';
+        let reconnectTimer = null;
+        let intentionalClose = false;
+        let agents = [];
+        let rooms = [];
+        let roomAgents = [];
+        let agentBuffers = new Map();
+        let agentStreamMeta = new Map();
+        let imageAbortControllers = [];
+        let imageGenerationStopped = false;
+        let generatedImageMessageIds = new Set();
 
-        function connect() {
-            let token = document.getElementById('tokenInput').value;
+        // 初始化
+        async function init() {
+            await loadAgents();
+            await loadRooms();
+            renderAgentList();
+            renderRoomList();
+            renderAgentSelect();
+        }
 
-            // 预处理 token
-            token = token.trim();  // 去除首尾空格和换行
-
-            // 如果 token 包含 Bearer 前缀，去掉它
-            if (token.toLowerCase().startsWith('bearer ')) {
-                token = token.substring(7).trim();
-            }
-
-            // 检查 token 格式
-            if (!token) {
-                alert('请先输入 JWT Token');
-                return;
-            }
-
-            // 打印 token 信息用于调试
-            console.log('Token 长度:', token.length);
-            console.log('Token 前50字符:', token.substring(0, 50));
-            console.log('Token 格式检查:', {
-                hasBearer: token.toLowerCase().includes('bearer'),
-                hasThreeParts: token.split('.').length === 3,
-                firstPart: token.split('.')[0]?.substring(0, 20) + '...'
-            });
-
+        async function loadAgents() {
             try {
-                const encodedToken = encodeURIComponent(token);
-                console.log('编码后的 token:', encodedToken.substring(0, 50) + '...');
-                ws = new WebSocket(`${serverUrl}?token=${encodedToken}`);
-
-                ws.onopen = function() {
-                    updateStatus(true);
-                    addSystemMessage('已连接到服务器');
-                };
-
-                ws.onmessage = function(event) {
-                    const message = JSON.parse(event.data);
-                    displayMessage(message);
-                };
-
-                ws.onclose = function(event) {
-                    updateStatus(false);
-                    let closeReason = '';
-                    // WebSocket 关闭码参考: https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
-                    switch(event.code) {
-                        case 1000: closeReason = '正常关闭'; break;
-                        case 1006: closeReason = '连接异常中断（可能是认证失败）'; break;
-                        case 1008: closeReason = '策略违规（Token 无效）'; break;
-                        case 1011: closeReason = '服务器错误'; break;
-                        default: closeReason = `关闭码: ${event.code}`;
-                    }
-                    addSystemMessage(`与服务器断开连接 - ${closeReason}`);
-                    console.error('WebSocket 关闭详情:', {
-                        code: event.code,
-                        reason: event.reason,
-                        wasClean: event.wasClean
-                    });
-                };
-
-                ws.onerror = function(error) {
-                    console.error('WebSocket 错误:', error);
-                    addSystemMessage('连接错误，请检查 token 是否正确');
-                };
-
-            } catch (error) {
-                alert('连接失败: ' + error.message);
+                const res = await fetch(`${API_BASE}/agents`);
+                const data = await res.json();
+                agents = data.data || [];
+            } catch (e) {
+                agents = [];
             }
         }
 
-        function disconnect() {
-            if (ws) {
-                ws.close();
-                ws = null;
-            }
+        async function loadRooms() {
+            const res = await fetch(`${API_BASE}/chat-rooms`);
+            const data = await res.json();
+            rooms = data.data || [];
         }
 
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const content = input.value.trim();
+        async function loadRoomAgents(roomId) {
+            const res = await fetch(`${API_BASE}/chat-rooms/${roomId}/agents`);
+            const data = await res.json();
+            roomAgents = data.data || [];
+        }
 
-            if (!content || !ws || ws.readyState !== WebSocket.OPEN) {
+        function renderAgentList() {
+            const el = document.getElementById('agentList');
+            if (agents.length === 0) {
+                el.innerHTML = '<div style="padding:12px;color:#888;font-size:12px;">数据表中暂无Agent数据，请先执行 schema.sql 中的 INSERT 语句初始化</div>';
                 return;
             }
-
-            ws.send(content);
-            input.value = '';
+            el.innerHTML = agents.map(a => `
+                <div class="agent-item">
+                    <div class="name">${a.name}</div>
+                    <div class="role">${a.roleType} · ${a.personality}</div>
+                </div>
+            `).join('');
         }
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
+        function renderRoomAgents() {
+            const el = document.getElementById('roomAgents');
+            if (!el) return;
+            const canDelete = roomAgents.length > 1;
+            el.innerHTML = roomAgents.map(member => {
+                const currentAgent = agents.find(a => a.id === member.agentId);
+                const currentCode = currentAgent?.agentCode || '';
+                const options = agents.map(agent => `
+                    <option value="${agent.agentCode}" ${agent.agentCode === currentCode ? 'selected' : ''}>
+                        ${agent.name} · ${cityName(agent.agentCode)}
+                    </option>
+                `).join('');
+                return `
+                    <div class="room-agent">
+                        <select onchange="replaceRoomAgent(${member.id}, this.value)">
+                            ${options}
+                        </select>
+                        <button class="icon-btn" title="删除" ${canDelete ? '' : 'disabled'} onclick="removeRoomAgent(${member.id})">×</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRoomList() {
+            const el = document.getElementById('roomList');
+            if (rooms.length === 0) {
+                el.innerHTML = '<div style="padding: 12px; color: #888; font-size: 12px;">暂无聊天室</div>';
+                return;
             }
+            el.innerHTML = rooms.map(r => `
+                <div class="room-item ${r.id === currentRoomId ? 'active' : ''}" onclick="enterRoom(${r.id})">
+                    <div style="font-weight: bold;">${r.name}</div>
+                    <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">${r.memberCount} 成员 · ${r.messageCount} 消息</div>
+                </div>
+            `).join('');
+        }
+
+        function renderAgentSelect() {
+            const el = document.getElementById('agentSelect');
+            if (agents.length === 0) {
+                el.innerHTML = '<div style="color:#e94560;font-size:12px;padding:8px 0;">请先初始化数据库Agent数据</div>';
+                return;
+            }
+            el.innerHTML = agents.map(a => `
+                <label>
+                    <input type="checkbox" value="${a.agentCode}" ${isDefaultAgent(a.agentCode) ? 'checked' : ''}>
+                    <span>${a.name} · ${cityName(a.agentCode)}</span>
+                </label>
+            `).join('');
+        }
+
+        function isDefaultAgent(agentCode) {
+            const defaultCodes = [];
+            const seenCities = new Set();
+            for (const agent of agents) {
+                const city = cityPrefix(agent.agentCode);
+                if (!seenCities.has(city)) {
+                    seenCities.add(city);
+                    defaultCodes.push(agent.agentCode);
+                }
+                if (defaultCodes.length >= 6) break;
+            }
+            return defaultCodes.includes(agentCode);
+        }
+
+        function cityPrefix(agentCode) {
+            return (agentCode || '').split('_')[0];
+        }
+
+        function cityName(agentCode) {
+            const cityMap = {
+                fz: '福州',
+                xm: '厦门',
+                qz: '泉州',
+                zz: '漳州',
+                pt: '莆田',
+                np: '南平',
+                sm: '三明',
+                ly: '龙岩',
+                nd: '宁德'
+            };
+            return cityMap[cityPrefix(agentCode)] || '福建';
+        }
+
+        function showCreateRoom() {
+            document.getElementById('createRoomModal').classList.add('show');
+        }
+
+        function hideCreateRoom() {
+            document.getElementById('createRoomModal').classList.remove('show');
+        }
+
+        async function createRoom() {
+            const name = document.getElementById('roomName').value.trim();
+            if (!name) return alert('请输入聊天室名称');
+
+            const checked = document.querySelectorAll('#agentSelect input:checked');
+            const agentCodes = Array.from(checked).map(c => c.value);
+            if (agentCodes.length === 0) return alert('请至少选择一个Agent');
+            if (agentCodes.length > 6) return alert('最多选择6个Agent');
+
+            const res = await fetch(`${API_BASE}/chat-rooms`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, agentCodes })
+            });
+            const data = await res.json();
+            if (data.code === 200) {
+                hideCreateRoom();
+                await loadRooms();
+                renderRoomList();
+                enterRoom(data.data.id);
+            }
+        }
+
+        async function enterRoom(roomId) {
+            currentRoomId = roomId;
+            renderRoomList();
+            await loadRoomAgents(roomId);
+
+            const room = rooms.find(r => r.id === roomId);
+            const roomName = room ? room.name : '聊天室';
+
+            document.getElementById('mainArea').innerHTML = `
+                <div class="header">
+                    <h1>${roomName}</h1>
+                    <div class="status disconnected" id="wsStatus">未连接</div>
+                </div>
+                <div class="room-agents" id="roomAgents"></div>
+                <div class="messages" id="messages"></div>
+                <div class="input-area">
+                    <div class="toolbar">
+                        <label><input type="checkbox" id="ragEnabled"> RAG模式</label>
+                        <label><input type="checkbox" id="searchEnabled"> 开启联网搜索</label>
+                        <button class="btn btn-secondary" onclick="document.getElementById('imageInput').click()">图片</button>
+                        <button class="btn btn-secondary" onclick="generateImage()">生图</button>
+                        <button class="btn btn-secondary" id="stopImageBtn" onclick="stopImageGeneration()" disabled>停止生图</button>
+                        <input type="file" id="imageInput" accept="image/*" onchange="uploadImage(event)">
+                        <div id="uploadPreview" style="font-size: 12px; color: #888;"></div>
+                    </div>
+                    <div class="input-row">
+                        <textarea id="messageInput" placeholder="输入消息，与非遗数字传承人对话..."
+                            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+                        <button class="btn" onclick="sendMessage()">发送</button>
+                    </div>
+                </div>
+            `;
+
+            renderRoomAgents();
+            await loadHistory(roomId);
+            connectWebSocket(roomId);
+        }
+
+        async function replaceRoomAgent(memberId, agentCode) {
+            const res = await fetch(`${API_BASE}/chat-rooms/${currentRoomId}/agents/${memberId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ agentCode })
+            });
+            const data = await res.json();
+            if (data.code !== 200) {
+                alert(data.message || '替换失败');
+            }
+            await loadRoomAgents(currentRoomId);
+            renderRoomAgents();
+            await loadRooms();
+            renderRoomList();
+        }
+
+        async function removeRoomAgent(memberId) {
+            if (roomAgents.length <= 1) return alert('聊天室至少保留一个Agent');
+            const res = await fetch(`${API_BASE}/chat-rooms/${currentRoomId}/agents/${memberId}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.code !== 200) {
+                alert(data.message || '删除失败');
+            }
+            await loadRoomAgents(currentRoomId);
+            renderRoomAgents();
+            await loadRooms();
+            renderRoomList();
+        }
+
+        async function loadHistory(roomId) {
+            const res = await fetch(`${API_BASE}/chat-rooms/${roomId}/messages/recent?limit=50`);
+            const data = await res.json();
+            const messages = data.data || [];
+            messages.reverse().forEach(msg => renderMessage(msg));
+        }
+
+        function connectWebSocket(roomId) {
+            if (ws) {
+                intentionalClose = true;
+                ws.close();
+            }
+            clearTimeout(reconnectTimer);
+            intentionalClose = false;
+
+            const wsUrl = `${WS_BASE}?roomId=${roomId}`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                updateStatus(true);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleWebSocketMessage(msg);
+            };
+
+            ws.onclose = () => {
+                updateStatus(false);
+                ws = null;
+                if (!intentionalClose) {
+                    reconnectTimer = setTimeout(() => connectWebSocket(roomId), 3000);
+                }
+            };
+
+            ws.onerror = () => {
+                updateStatus(false);
+            };
         }
 
         function updateStatus(connected) {
-            const statusEl = document.getElementById('status');
-            const tokenInput = document.getElementById('tokenInput');
-            const connectBtn = document.getElementById('connectBtn');
-            const disconnectBtn = document.getElementById('disconnectBtn');
-            const messageInput = document.getElementById('messageInput');
-            const sendBtn = document.getElementById('sendBtn');
-
-            if (connected) {
-                statusEl.textContent = '已连接';
-                statusEl.className = 'status connected';
-                tokenInput.disabled = true;
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = false;
-                messageInput.disabled = false;
-                sendBtn.disabled = false;
-                messageInput.focus();
-            } else {
-                statusEl.textContent = '未连接';
-                statusEl.className = 'status disconnected';
-                tokenInput.disabled = false;
-                connectBtn.disabled = false;
-                disconnectBtn.disabled = true;
-                messageInput.disabled = true;
-                sendBtn.disabled = true;
-                document.getElementById('onlineCount').textContent = '0';
-            }
+            const el = document.getElementById('wsStatus');
+            if (!el) return;
+            el.textContent = connected ? '已连接' : '未连接';
+            el.className = 'status ' + (connected ? 'connected' : 'disconnected');
         }
 
-        function displayMessage(message) {
-            const messagesEl = document.getElementById('messages');
-
-            // 更新在线人数
-            if (message.onlineCount !== undefined) {
-                document.getElementById('onlineCount').textContent = message.onlineCount;
+        function handleWebSocketMessage(msg) {
+            switch (msg.type) {
+                case 'CHAT':
+                case 'IMAGE':
+                case 'EMOJI':
+                    renderMessage(msg);
+                    break;
+                case 'AGENT_START':
+                    createAgentSlot(msg);
+                    agentBuffers.set(msg.streamId, '');
+                    agentStreamMeta.set(msg.streamId, msg);
+                    break;
+                case 'AGENT_CHUNK':
+                    appendAgentChunk(msg.streamId, msg);
+                    break;
+                case 'AGENT_END':
+                    finalizeAgentMessage(msg.streamId, msg);
+                    agentBuffers.delete(msg.streamId);
+                    agentStreamMeta.delete(msg.streamId);
+                    break;
+                case 'SYSTEM':
+                    renderSystemMessage(msg.content);
+                    break;
+                case 'ERROR':
+                    renderAgentError(msg);
+                    break;
+                case 'PROGRESS':
+                    updateProgress(msg.metadata?.taskId, msg.content);
+                    break;
             }
+            scrollToBottom();
+        }
 
-            const messageEl = document.createElement('div');
-            messageEl.className = 'message';
+        function renderMessage(msg) {
+            const container = document.getElementById('messages');
+            if (!container) return;
+            if (msg.messageId && document.getElementById(`msg-${msg.messageId}`)) return;
+            if (msg.messageId) generatedImageMessageIds.add(String(msg.messageId));
 
-            // 系统消息特殊样式
-            if (message.type === 'SYSTEM') {
-                messageEl.className += ' system';
+            const isUser = msg.senderType === 'USER';
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user' : 'agent'}`;
+            div.id = `msg-${msg.messageId || msg.streamId || Date.now()}`;
+
+            let html = '';
+            if (!isUser) {
+                html += `<div class="sender">${msg.senderName || msg.senderId}</div>`;
             }
+            html += `<div class="content">${escapeHtml(msg.content || '')}</div>`;
+            if (msg.imageUrl) {
+                html += `<img src="${msg.imageUrl}" onclick="window.open('${msg.imageUrl}')">`;
+            }
+            div.innerHTML = html;
+            container.appendChild(div);
+            scrollToBottom();
+        }
 
-            const time = message.timestamp ? new Date(message.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+        function renderSystemMessage(text) {
+            const container = document.getElementById('messages');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = 'message system';
+            div.textContent = text;
+            container.appendChild(div);
+            scrollToBottom();
+        }
 
-            messageEl.innerHTML = `
-                <div class="message-header">
-                    <span class="sender ${message.type.toLowerCase()}">${escapeHtml(message.senderNickname || message.sender)}</span>
-                    <span class="time">${time}</span>
-                </div>
-                <div class="content">${escapeHtml(message.content)}</div>
+        function createAgentSlot(msg) {
+            const container = document.getElementById('messages');
+            if (!container || document.getElementById(`stream-${msg.streamId}`)) return;
+
+            const div = document.createElement('div');
+            div.className = 'message agent pending';
+            div.id = `stream-${msg.streamId}`;
+            div.dataset.order = msg.metadata?.order ?? '';
+            div.innerHTML = `
+                <div class="sender">${escapeHtml(msg.senderName || msg.senderId)}</div>
+                <div class="content">正在思考...</div>
             `;
-
-            messagesEl.appendChild(messageEl);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            insertAgentSlot(container, div);
+            scrollToBottom();
         }
 
-        function addSystemMessage(content) {
-            displayMessage({
-                type: 'SYSTEM',
-                sender: 'SYSTEM',
-                senderNickname: '系统',
-                content: content,
-                onlineCount: 0
+        function insertAgentSlot(container, slot) {
+            const order = Number(slot.dataset.order);
+            if (Number.isNaN(order)) {
+                container.appendChild(slot);
+                return;
+            }
+            const slots = Array.from(container.querySelectorAll('.message.agent[id^="stream-"]'));
+            const next = slots.find(el => {
+                const nextOrder = Number(el.dataset.order);
+                return !Number.isNaN(nextOrder) && nextOrder > order;
             });
+            if (next) {
+                container.insertBefore(slot, next);
+            } else {
+                container.appendChild(slot);
+            }
+        }
+
+        function appendAgentChunk(streamId, msg) {
+            let buf = agentBuffers.get(streamId) || '';
+            buf += msg.content || '';
+            agentBuffers.set(streamId, buf);
+
+            let el = document.getElementById(`stream-${streamId}`);
+            if (!el) {
+                createAgentSlot(msg);
+                el = document.getElementById(`stream-${streamId}`);
+            }
+            el.classList.remove('pending');
+            el.innerHTML = `<div class="sender">${escapeHtml(msg.senderName || msg.senderId)}</div><div class="content">${escapeHtml(buf)}<span class="cursor">|</span></div>`;
+            scrollToBottom();
+        }
+
+        function finalizeAgentMessage(streamId, msg) {
+            const el = document.getElementById(`stream-${streamId}`);
+            if (el) {
+                el.classList.remove('pending');
+                el.id = `msg-${msg.messageId || streamId}`;
+                el.innerHTML = `<div class="sender">${escapeHtml(msg.senderName || msg.senderId)}</div><div class="content">${escapeHtml(msg.content || '')}</div>`;
+            }
+        }
+
+        function renderAgentError(msg) {
+            const el = msg.streamId ? document.getElementById(`stream-${msg.streamId}`) : null;
+            if (el) {
+                el.classList.remove('pending');
+                el.innerHTML = `<div class="sender">${escapeHtml(msg.senderName || msg.senderId || '系统')}</div><div class="content">错误: ${escapeHtml(msg.content || '')}</div>`;
+            } else {
+                renderSystemMessage('错误: ' + (msg.content || ''));
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            const preview = document.getElementById('uploadPreview');
+            const imageUrl = preview.dataset.url || null;
+
+            if (!content && !imageUrl) return;
+
+            const searchEnabled = document.getElementById('searchEnabled')?.checked || false;
+            const ragEnabled = document.getElementById('ragEnabled')?.checked || false;
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: imageUrl ? 'IMAGE' : 'CHAT',
+                    content: content,
+                    imageUrl: imageUrl,
+                    metadata: { searchEnabled, ragEnabled }
+                }));
+            }
+
+            input.value = '';
+            preview.textContent = '';
+            preview.dataset.url = '';
+        }
+
+        async function uploadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const preview = document.getElementById('uploadPreview');
+            preview.textContent = '上传中...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(`${API_BASE}/upload/image`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    preview.textContent = `已上传 ${file.name}`;
+                    preview.dataset.url = data.data.url;
+                } else {
+                    preview.textContent = '上传失败';
+                }
+            } catch (e) {
+                preview.textContent = '上传失败: ' + e.message;
+            }
+        }
+
+        async function generateImage() {
+            const input = document.getElementById('messageInput');
+            const prompt = input.value.trim();
+            if (!prompt) return alert('请先输入描述文字');
+            if (roomAgents.length === 0) return alert('当前聊天室没有Agent');
+
+            stopImageGeneration(false);
+            const targets = shouldAllAgentsGenerate(prompt) ? roomAgents : [roomAgents[0]];
+            imageGenerationStopped = false;
+            setImageGenerating(true);
+            renderSystemMessage(`正在由 ${targets.length} 个Agent生成图片: "${prompt}" ...`);
+
+            for (const member of targets) {
+                if (imageGenerationStopped) break;
+                await generateImageForAgent(member, prompt);
+                if (imageGenerationStopped) break;
+                await sleep(1200);
+            }
+            setImageGenerating(false);
+        }
+
+        async function generateImageForAgent(member, prompt) {
+            const agent = agents.find(a => a.id === member.agentId) || {};
+            const controller = new AbortController();
+            imageAbortControllers.push(controller);
+            try {
+                const res = await fetch(`${API_BASE}/aigc/image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                        userId: 1,
+                        roomId: currentRoomId,
+                        agentCode: agent.agentCode,
+                        prompt: prompt,
+                        style: '水墨'
+                    })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    const messageId = data.data.messageId;
+                    if (messageId && !generatedImageMessageIds.has(String(messageId))) {
+                        generatedImageMessageIds.add(String(messageId));
+                        renderMessage({
+                            messageId,
+                            senderType: 'AGENT',
+                            senderId: data.data.agentCode,
+                            senderName: data.data.agentName || agent.name || 'Agent',
+                            senderAvatar: data.data.agentAvatar || agent.avatar,
+                            content: `${data.data.agentName || agent.name || 'Agent'} 生成了这张图片`,
+                            imageUrl: data.data.imageUrl
+                        });
+                    } else if (!messageId) {
+                        renderMessage({
+                            senderType: 'AGENT',
+                            senderId: data.data.agentCode,
+                            senderName: data.data.agentName || agent.name || 'Agent',
+                            senderAvatar: data.data.agentAvatar || agent.avatar,
+                            content: `${data.data.agentName || agent.name || 'Agent'} 生成了这张图片`,
+                            imageUrl: data.data.imageUrl
+                        });
+                    }
+                } else {
+                    renderSystemMessage(`${agent.name || 'Agent'} 图片生成失败: ${data.message || '未知错误'}`);
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    renderSystemMessage(`${agent.name || 'Agent'} 的图片生成已打断`);
+                } else {
+                    renderSystemMessage(`${agent.name || 'Agent'} 图片生成失败: ${e.message}`);
+                }
+            } finally {
+                imageAbortControllers = imageAbortControllers.filter(item => item !== controller);
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function shouldAllAgentsGenerate(text) {
+            return /你们|大家|所有人|全员|每个人|一起/.test(text || '');
+        }
+
+        function stopImageGeneration(showMessage = true) {
+            imageGenerationStopped = true;
+            if (imageAbortControllers.length === 0) {
+                setImageGenerating(false);
+                return;
+            }
+            imageAbortControllers.forEach(controller => controller.abort());
+            imageAbortControllers = [];
+            setImageGenerating(false);
+            if (showMessage) renderSystemMessage('已请求打断图片生成');
+        }
+
+        function setImageGenerating(active) {
+            const btn = document.getElementById('stopImageBtn');
+            if (btn) btn.disabled = !active;
+        }
+
+        function updateProgress(taskId, progress) {
+            console.log('Task', taskId, 'progress:', progress + '%');
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messages');
+            if (container) container.scrollTop = container.scrollHeight;
         }
 
         function escapeHtml(text) {
@@ -394,6 +950,10 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // 启动
+        init();
     </script>
 </body>
 </html>
+

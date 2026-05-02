@@ -1,5 +1,8 @@
 package com.omnisource.websocket;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.omnisource.websocket.dto.WebSocketMessage;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
@@ -7,134 +10,87 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
-/**
- * WebSocket 会话管理器
- * 管理所有在线用户的 WebSocket 会话
- * 支持广播消息和单点发送
- */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class WebSocketSessionManager {
 
-    /**
-     * 存储所有在线用户的会话
-     * key: sessionId, value: WebSocketSession
-     * 使用 ConcurrentHashMap 保证线程安全
-     */
-    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper;
 
-    /**
-     * 存储用户ID和会话的映射
-     * key: userId, value: sessionId
-     * 用于通过用户ID查找会话
-     */
-    private final Map<String, String> userSessionMap = new ConcurrentHashMap<>();
+    private final Map<Long, Set<WebSocketSession>> roomSessions = new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> allSessions = new ConcurrentHashMap<>();
 
-    /**
-     * 用户连接时调用 - 添加会话
-     */
-    public void addSession(String sessionId, WebSocketSession session) {
-        sessions.put(sessionId, session);
-
-        // 从 session 属性中获取用户ID（由拦截器设置）
-        String userId = getUserIdFromSession(session);
-        if (userId != null) {
-            userSessionMap.put(userId, sessionId);
-        }
-
-        log.info("用户连接成功，当前在线人数: {}, sessionId: {}, userId: {}",
-                sessions.size(), sessionId, userId);
+    public void addSessionToRoom(Long roomId, WebSocketSession session) {
+        allSessions.put(session.getId(), session);
+        roomSessions.computeIfAbsent(roomId, k -> new CopyOnWriteArraySet<>()).add(session);
+        log.info("Session {} 加入聊天室 {}, 当前在线 {}", session.getId(), roomId, getRoomOnlineCount(roomId));
     }
 
-    /**
-     * 用户断开时调用 - 移除会话
-     */
-    public void removeSession(String sessionId) {
-        WebSocketSession session = sessions.remove(sessionId);
-        if (session != null) {
-            String userId = getUserIdFromSession(session);
-            if (userId != null) {
-                userSessionMap.remove(userId);
+    public void removeSessionFromRoom(Long roomId, WebSocketSession session) {
+        Set<WebSocketSession> sessions = roomSessions.get(roomId);
+        if (sessions != null) {
+            sessions.remove(session);
+            if (sessions.isEmpty()) {
+                roomSessions.remove(roomId);
             }
         }
-        log.info("用户断开连接，当前在线人数: {}, sessionId: {}",
-                sessions.size(), sessionId);
+        allSessions.remove(session.getId());
+        log.info("Session {} 离开聊天室 {}, 当前在线 {}", session.getId(), roomId, getRoomOnlineCount(roomId));
     }
 
-    /**
-     * 广播消息给所有在线用户
-     */
-    public void broadcastMessage(String message) {
-        log.debug("广播消息: {}, 目标人数: {}", message, sessions.size());
+    public void broadcastToRoom(Long roomId, WebSocketMessage message) {
+        Set<WebSocketSession> sessions = roomSessions.get(roomId);
+        if (sessions == null || sessions.isEmpty()) return;
 
-        for (WebSocketSession session : sessions.values()) {
-            if (session.isOpen()) {
-                try {
-                    session.sendMessage(new TextMessage(message));
-                } catch (IOException e) {
-                    log.error("发送消息失败, sessionId: {}", session.getId(), e);
+        try {
+            String json = objectMapper.writeValueAsString(message);
+            for (WebSocketSession session : sessions) {
+                if (session.isOpen()) {
+                    try {
+                        session.sendMessage(new TextMessage(json));
+                    } catch (IOException e) {
+                        log.error("广播消息失败, sessionId={}", session.getId(), e);
+                    }
                 }
             }
+        } catch (Exception e) {
+            log.error("消息序列化失败", e);
         }
     }
 
-    /**
-     * 发送消息给指定用户
-     */
-    public void sendMessageToUser(String userId, String message) {
-        String sessionId = userSessionMap.get(userId);
-        if (sessionId == null) {
-            log.warn("用户不在线, userId: {}", userId);
-            return;
-        }
-
-        WebSocketSession session = sessions.get(sessionId);
+    public void sendToSession(String sessionId, WebSocketMessage message) {
+        WebSocketSession session = allSessions.get(sessionId);
         if (session != null && session.isOpen()) {
             try {
-                session.sendMessage(new TextMessage(message));
-                log.debug("消息已发送给用户: {}", userId);
-            } catch (IOException e) {
-                log.error("发送消息给用户失败, userId: {}", userId, e);
+                String json = objectMapper.writeValueAsString(message);
+                session.sendMessage(new TextMessage(json));
+            } catch (Exception e) {
+                log.error("发送消息失败, sessionId={}", sessionId, e);
             }
         }
     }
 
-    /**
-     * 发送消息给指定会话
-     */
-    public void sendMessageToSession(String sessionId, String message) {
-        WebSocketSession session = sessions.get(sessionId);
-        if (session != null && session.isOpen()) {
-            try {
-                session.sendMessage(new TextMessage(message));
-            } catch (IOException e) {
-                log.error("发送消息失败, sessionId: {}", sessionId, e);
-            }
-        }
+    public int getRoomOnlineCount(Long roomId) {
+        Set<WebSocketSession> sessions = roomSessions.get(roomId);
+        return sessions == null ? 0 : sessions.size();
     }
 
-    /**
-     * 获取当前在线人数
-     */
-    public int getOnlineCount() {
-        return sessions.size();
-    }
-
-    /**
-     * 从 session 属性中获取用户ID
-     */
-    private String getUserIdFromSession(WebSocketSession session) {
-        Object userId = session.getAttributes().get("userId");
-        return userId != null ? userId.toString() : null;
-    }
-
-    /**
-     * 从 session 属性中获取用户名
-     */
     public String getUsernameFromSession(WebSocketSession session) {
         Object username = session.getAttributes().get("username");
         return username != null ? username.toString() : "匿名用户";
+    }
+
+    public Long getUserIdFromSession(WebSocketSession session) {
+        Object userId = session.getAttributes().get("userId");
+        return userId != null ? Long.valueOf(userId.toString()) : null;
+    }
+
+    public Long getRoomIdFromSession(WebSocketSession session) {
+        Object roomId = session.getAttributes().get("roomId");
+        return roomId != null ? Long.valueOf(roomId.toString()) : null;
     }
 }

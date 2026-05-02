@@ -1,46 +1,39 @@
-server:
+﻿server:
   port: 8081
 
 spring:
-  config:
-    import: optional:classpath:application-local.yml
   application:
     name: OmniSource
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
   ai:
     openai:
-      api-key: ${qianwen.api-key:${QIANWEN_API_KEY:}}
-      base-url: ${qianwen.base-url:${QIANWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}}
+      api-key: ${qianwen.api-key}
+      base-url: ${qianwen.base-url}
       chat:
         options:
-          model: ${qianwen.model:${QIANWEN_MODEL:qwen3.5-flash}}
+          model: ${qianwen.model}
           temperature: 0.7
           max-tokens: 2000
   datasource:
-    url: ${mysql.url:${MYSQL_URL:jdbc:mysql://127.0.0.1:3306/omni_source?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true}}
-    username: ${mysql.username:${MYSQL_USERNAME:root}}
-    password: ${mysql.password:${MYSQL_PASSWORD:}}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: ${redis.host:${REDIS_HOST:127.0.0.1}}
-      port: ${redis.port:${REDIS_PORT:6379}}
-      password: ${redis.password:${REDIS_PASSWORD:}}
-      database: 0
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
       timeout: 2000ms
       lettuce:
         pool:
           max-active: 8
           max-idle: 8
           min-idle: 0
-
-# JWT配置
-jwt:
-  # JWT密钥（生产环境请使用环境变量或配置中心）
-  secret: T21uaVNvdXJjZVNlY3JldEtleTIwMjZGb3JKV1RHZW5lcmF0aW9uQW5kVmFsaWRhdGlvbg==
-  # Access Token有效期（毫秒，默认2小时）
-  access-token-expiration: 7200000
-  # Refresh Token有效期（毫秒，默认7天）
-  refresh-token-expiration: 604800000
 
 # MyBatis配置
 mybatis:
@@ -51,18 +44,46 @@ mybatis:
 
 # 千问API配置
 qianwen:
-  api-key: ${qianwen.api-key:${QIANWEN_API_KEY:}}
-  base-url: ${qianwen.base-url:${QIANWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}}
-  model: ${qianwen.model:${QIANWEN_MODEL:qwen3.5-flash}}
+  api-key: ${QIANWEN_API_KEY}
+  base-url: ${QIANWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
+  model: ${QIANWEN_MODEL:qwen3.5-plus}
+  image-model: ${QIANWEN_IMAGE_MODEL:qwen-image-2.0-pro}
+  image-api-url: ${QIANWEN_IMAGE_API_URL:https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation}
+  image-task-url: ${QIANWEN_IMAGE_TASK_URL:https://dashscope.aliyuncs.com/api/v1/tasks}
+  image-size: ${QIANWEN_IMAGE_SIZE:1024*1024}
 
-# RAG知识库配置
-rag:
-  dataset-path: Util/standardList.jsonl
-  default-top-k: 3
-
+# Milvus
 milvus:
-  host: ${milvus.host:${MILVUS_HOST:127.0.0.1}}
-  port: ${milvus.port:${MILVUS_PORT:19530}}
-  username: ${milvus.username:${MILVUS_USERNAME:}}
-  password: ${milvus.password:${MILVUS_PASSWORD:}}
-  database: ${milvus.database:${MILVUS_DATABASE:default}}
+  host: ${MILVUS_HOST}
+  port: ${MILVUS_PORT:19530}
+  database: ${MILVUS_DATABASE:default}
+  username: ${MILVUS_USERNAME:}
+  password: ${MILVUS_PASSWORD:}
+
+# 阿里云OSS
+aliyun:
+  oss:
+    endpoint: ${ALIYUN_OSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
+    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID}
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET}
+    bucket-name: ${ALIYUN_OSS_BUCKET_NAME:java-ai-fzu}
+    folder: ${ALIYUN_OSS_FOLDER:OmniSource/}
+    public-base-url: ${ALIYUN_OSS_PUBLIC_BASE_URL:https://java-ai-fzu.oss-cn-beijing.aliyuncs.com}
+    appearance-folder: ${ALIYUN_OSS_APPEARANCE_FOLDER:OmniSource/appearance/}
+    agent-image-folder: ${ALIYUN_OSS_AGENT_IMAGE_FOLDER:OmniSource/chatroom/agents/}
+
+# Tavily
+tavily:
+  api-key: ${TAVILY_API_KEY}
+  max-results: ${TAVILY_MAX_RESULTS:3}
+
+# 聊天室配置
+chat:
+  room:
+    max-agents: 6
+  history:
+    redis-limit: 50
+    context-limit: 10
+  agent:
+    cooldown-seconds: 30
+    max-responders: 3
