@@ -1,0 +1,984 @@
+openapi: 3.0.3
+info:
+  title: OmniSource Backend API
+  version: "2.0"
+  description: |
+    OmniSource 后端总接口文档。HTTP 接口基于 Spring Boot 3，默认服务端口 8081。
+    WebSocket 通道通过 x-websocket 扩展字段记录，标准 OpenAPI paths 仅描述 HTTP/SSE 接口。
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+tags:
+  - name: AIGC
+    description: 普通问答、流式问答、多模态理解与图片生成
+  - name: Agent
+    description: 非遗 Agent 查询
+  - name: Chat
+    description: 多 Agent 联合问答
+  - name: ChatRoom
+    description: 聊天室、成员与历史消息
+  - name: RAG
+    description: 知识库重建、检索与 Prompt 预览
+  - name: Upload
+    description: 文件上传
+paths:
+  /api/aigc/chat:
+    get:
+      tags: [AIGC]
+      summary: 普通 AI 问答
+      parameters:
+        - $ref: "#/components/parameters/MessageQuery"
+      responses:
+        "200":
+          description: 纯文本回答
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: 你好，我是 OmniSource AI 助手。
+  /api/aigc/stream:
+    get:
+      tags: [AIGC]
+      summary: SSE 流式 AI 问答
+      description: 内部会拼接 RAG 检索上下文后流式输出。
+      parameters:
+        - name: message
+          in: query
+          required: false
+          schema:
+            type: string
+            default: 你好，请自我介绍
+      responses:
+        "200":
+          description: SSE 文本流
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /api/aigc/multimodal:
+    post:
+      tags: [AIGC]
+      summary: 图片理解问答
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MultimodalRequest"
+            example:
+              imageUrl: https://example.com/image.png
+              question: 请描述这张图片
+      responses:
+        "200":
+          description: 图片理解结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StringResult"
+  /api/aigc/image:
+    post:
+      tags: [AIGC]
+      summary: 生成图片
+      description: 传入 roomId 和有效 agentCode 时，生成结果会写入聊天室并广播。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageGenerateRequest"
+      responses:
+        "200":
+          description: 图片生成结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageGenerateResult"
+  /api/aigc/image/tasks/{taskId}:
+    get:
+      tags: [AIGC]
+      summary: 查询图片生成任务
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 图片生成任务
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageGenerationTaskResult"
+  /api/agents:
+    get:
+      tags: [Agent]
+      summary: 获取启用的 Agent 列表
+      responses:
+        "200":
+          description: Agent 列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentListResult"
+  /api/agents/{code}:
+    get:
+      tags: [Agent]
+      summary: 按编码获取 Agent 详情
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fz_shoushan_stone
+      responses:
+        "200":
+          description: Agent 详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/chat:
+    post:
+      tags: [Chat]
+      summary: 发起多 Agent 联合问答
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MultiAgentChatRequest"
+      responses:
+        "200":
+          description: 多 Agent 问答结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultiAgentChatResult"
+  /api/chat/{sessionId}:
+    get:
+      tags: [Chat]
+      summary: 查询会话最近一次结果
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 会话结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MultiAgentChatResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/chat-rooms:
+    get:
+      tags: [ChatRoom]
+      summary: 获取当前用户聊天室列表
+      responses:
+        "200":
+          description: 聊天室列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRoomListResult"
+    post:
+      tags: [ChatRoom]
+      summary: 创建聊天室
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChatRoomRequest"
+      responses:
+        "200":
+          description: 已创建的聊天室
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRoomResult"
+  /api/chat-rooms/{roomId}:
+    get:
+      tags: [ChatRoom]
+      summary: 获取聊天室详情
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 聊天室详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRoomResult"
+    delete:
+      tags: [ChatRoom]
+      summary: 解散聊天室
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoidResult"
+  /api/chat-rooms/{roomId}/agents:
+    get:
+      tags: [ChatRoom]
+      summary: 获取聊天室 Agent 成员
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: 成员列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRoomMemberListResult"
+  /api/chat-rooms/{roomId}/agents/{memberId}:
+    put:
+      tags: [ChatRoom]
+      summary: 替换聊天室 Agent
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+        - $ref: "#/components/parameters/MemberId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplaceRoomAgentRequest"
+      responses:
+        "200":
+          description: 替换后的成员
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRoomMemberResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    delete:
+      tags: [ChatRoom]
+      summary: 移除聊天室 Agent
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+        - $ref: "#/components/parameters/MemberId"
+      responses:
+        "200":
+          description: 移除成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoidResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/chat-rooms/{roomId}/messages:
+    get:
+      tags: [ChatRoom]
+      summary: 分页获取历史消息
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+      responses:
+        "200":
+          description: 历史消息列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageListResult"
+  /api/chat-rooms/{roomId}/messages/recent:
+    get:
+      tags: [ChatRoom]
+      summary: 获取最近历史消息
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+      responses:
+        "200":
+          description: 最近消息列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageListResult"
+  /api/rag/reload:
+    post:
+      tags: [RAG]
+      summary: 重建知识库
+      responses:
+        "200":
+          description: 重建结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RagReloadResult"
+  /api/rag/retrieve:
+    get:
+      tags: [RAG]
+      summary: 向量检索调试
+      parameters:
+        - $ref: "#/components/parameters/Question"
+        - $ref: "#/components/parameters/TopK"
+      responses:
+        "200":
+          description: 检索结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RagRetrievalListResult"
+  /api/rag/prompt:
+    get:
+      tags: [RAG]
+      summary: 预览拼接后的 RAG 上下文
+      parameters:
+        - $ref: "#/components/parameters/Question"
+        - $ref: "#/components/parameters/TopK"
+      responses:
+        "200":
+          description: Prompt 文本
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StringResult"
+  /api/upload/image:
+    post:
+      tags: [Upload]
+      summary: 上传图片到 OSS
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: 上传结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadImageResult"
+x-websocket:
+  /ws/chat:
+    summary: 聊天室实时消息通道
+    url: ws://localhost:8081/ws/chat?roomId={roomId}
+    queryParameters:
+      roomId:
+        type: integer
+        format: int64
+        required: true
+    messageSchema:
+      $ref: "#/components/schemas/WebSocketMessage"
+components:
+  parameters:
+    MessageQuery:
+      name: message
+      in: query
+      required: false
+      schema:
+        type: string
+        default: 你好
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    Question:
+      name: question
+      in: query
+      required: true
+      schema:
+        type: string
+    TopK:
+      name: topK
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 3
+        minimum: 1
+  responses:
+    BadRequest:
+      description: 参数错误
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResult"
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResult"
+  schemas:
+    ResultBase:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: success
+        timestamp:
+          type: string
+          format: date-time
+    ErrorResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              nullable: true
+      example:
+        code: 400
+        message: 参数错误
+        timestamp: "2026-05-03T10:00:00"
+    VoidResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              nullable: true
+    StringResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: string
+    AgentResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/Agent"
+    AgentListResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Agent"
+    ChatRoomResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ChatRoom"
+    ChatRoomListResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/ChatRoom"
+    ChatRoomMemberResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ChatRoomMember"
+    ChatRoomMemberListResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/ChatRoomMember"
+    ChatMessageListResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/ChatMessage"
+    MultiAgentChatResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/MultiAgentChatResponse"
+    RagRetrievalListResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/RagRetrievalResponse"
+    RagReloadResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                ready:
+                  type: boolean
+                message:
+                  type: string
+    ImageGenerateResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                imageUrl:
+                  type: string
+                  format: uri
+                agentCode:
+                  type: string
+                agentName:
+                  type: string
+                agentAvatar:
+                  type: string
+                sourceImageUrl:
+                  type: string
+                messageId:
+                  type: string
+    ImageGenerationTaskResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ImageGenerationTask"
+    UploadImageResult:
+      allOf:
+        - $ref: "#/components/schemas/ResultBase"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                filename:
+                  type: string
+    MultimodalRequest:
+      type: object
+      properties:
+        imageUrl:
+          type: string
+          format: uri
+        question:
+          type: string
+          default: 请描述这张图片
+      required: [imageUrl]
+    ImageGenerateRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+          default: 1
+        roomId:
+          type: integer
+          format: int64
+          nullable: true
+        prompt:
+          type: string
+        style:
+          type: string
+        agentCode:
+          type: string
+      required: [prompt]
+      example:
+        userId: 1
+        roomId: 1001
+        prompt: 生成一张寿山石雕风格海报
+        style: 国风插画
+        agentCode: fz_shoushan_stone
+    MultiAgentChatRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        query:
+          type: string
+        heritageId:
+          type: string
+        topK:
+          type: integer
+          default: 3
+        searchEnabled:
+          type: boolean
+        agentCodes:
+          type: array
+          items:
+            type: string
+      required: [query]
+      example:
+        sessionId: optional-session-id
+        query: 寿山石雕有哪些特点？
+        heritageId: fz_shoushan_stone
+        topK: 3
+        searchEnabled: true
+        agentCodes:
+          - fz_shoushan_stone
+          - fz_lacquerware
+    CreateChatRoomRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        themeId:
+          type: integer
+          format: int64
+          nullable: true
+        agentCodes:
+          type: array
+          items:
+            type: string
+      required: [name]
+    ReplaceRoomAgentRequest:
+      type: object
+      properties:
+        agentCode:
+          type: string
+      required: [agentCode]
+    Agent:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        agentCode:
+          type: string
+        name:
+          type: string
+        avatar:
+          type: string
+        roleType:
+          type: string
+        personality:
+          type: string
+        promptTemplate:
+          type: string
+        knowledgeScope:
+          type: string
+        languageStyle:
+          type: string
+        constraints:
+          type: string
+        maxTokens:
+          type: integer
+        temperature:
+          type: number
+        topP:
+          type: number
+        isPreset:
+          type: integer
+        sortOrder:
+          type: integer
+        status:
+          type: integer
+        createTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+        isDeleted:
+          type: integer
+    ChatRoom:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        roomCode:
+          type: string
+        userId:
+          type: integer
+          format: int64
+        themeId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        maxMembers:
+          type: integer
+        memberCount:
+          type: integer
+        messageCount:
+          type: integer
+        status:
+          type: integer
+        createTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+        isDeleted:
+          type: integer
+    ChatRoomMember:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        memberType:
+          type: string
+        userId:
+          type: integer
+          format: int64
+        agentId:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        avatar:
+          type: string
+        roleInRoom:
+          type: string
+        lastSpeakTime:
+          type: string
+          format: date-time
+        speakCount:
+          type: integer
+        joinTime:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        createTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+        isDeleted:
+          type: integer
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        messageType:
+          type: string
+          example: TEXT
+        senderType:
+          type: string
+          example: AGENT
+        senderId:
+          type: string
+        senderName:
+          type: string
+        senderAvatar:
+          type: string
+        content:
+          type: string
+        imageUrl:
+          type: string
+        replyToMessageId:
+          type: integer
+          format: int64
+        metadata:
+          type: string
+        isStream:
+          type: integer
+        streamId:
+          type: string
+        searchEnabled:
+          type: integer
+        searchResults:
+          type: string
+        createTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+        isDeleted:
+          type: integer
+    MultiAgentChatResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        query:
+          type: string
+        heritageId:
+          type: string
+        finalAnswer:
+          type: string
+        agentReplies:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentReplyResponse"
+        retrievals:
+          type: array
+          items:
+            $ref: "#/components/schemas/RagRetrievalResponse"
+        webSearchResult:
+          type: string
+    AgentReplyResponse:
+      type: object
+      properties:
+        agentCode:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        references:
+          type: array
+          items:
+            type: string
+        searchUsed:
+          type: boolean
+    RagRetrievalResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        score:
+          type: number
+          format: double
+        content:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    ImageGenerationTask:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        taskId:
+          type: string
+        userId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        prompt:
+          type: string
+        style:
+          type: string
+        status:
+          type: string
+        resultUrl:
+          type: string
+        errorMessage:
+          type: string
+        progress:
+          type: integer
+        model:
+          type: string
+        createTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+    WebSocketMessage:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [CHAT, AGENT_START, AGENT_CHUNK, AGENT_END, IMAGE, EMOJI, TYPING, PROGRESS, SYSTEM, ERROR]
+        senderType:
+          type: string
+          enum: [USER, AGENT, SYSTEM]
+        senderId:
+          type: string
+        senderName:
+          type: string
+        senderAvatar:
+          type: string
+        content:
+          type: string
+        imageUrl:
+          type: string
+        roomId:
+          type: integer
+          format: int64
+        streamId:
+          type: string
+        messageId:
+          type: integer
+          format: int64
+        replyToMessageId:
+          type: integer
+          format: int64
+        metadata:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+        onlineCount:
+          type: integer
