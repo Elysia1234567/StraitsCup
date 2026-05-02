@@ -6,6 +6,7 @@ spring:
     name: OmniSource
   config:
     import:
+      - optional:classpath:application-local.yml
       - optional:file:.env[.properties]
       - optional:file:../.env[.properties]
   ai:
