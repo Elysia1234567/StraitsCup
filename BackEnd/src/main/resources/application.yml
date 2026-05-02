@@ -2,27 +2,29 @@ server:
   port: 8081
 
 spring:
+  config:
+    import: optional:classpath:application-local.yml
   application:
     name: OmniSource
   ai:
     openai:
-      api-key: ${qianwen.api-key}
-      base-url: ${qianwen.base-url}
+      api-key: ${qianwen.api-key:${QIANWEN_API_KEY:}}
+      base-url: ${qianwen.base-url:${QIANWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}}
       chat:
         options:
-          model: ${qianwen.model}
+          model: ${qianwen.model:${QIANWEN_MODEL:qwen3.5-flash}}
           temperature: 0.7
           max-tokens: 2000
   datasource:
-    url: "jdbc:mysql://118.190.206.152:3306/omni_source?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true"
-    username: omni
-    password: 123456
+    url: ${mysql.url:${MYSQL_URL:jdbc:mysql://127.0.0.1:3306/omni_source?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true}}
+    username: ${mysql.username:${MYSQL_USERNAME:root}}
+    password: ${mysql.password:${MYSQL_PASSWORD:}}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: 118.190.206.152
-      port: 6379
-      password:
+      host: ${redis.host:${REDIS_HOST:127.0.0.1}}
+      port: ${redis.port:${REDIS_PORT:6379}}
+      password: ${redis.password:${REDIS_PASSWORD:}}
       database: 0
       timeout: 2000ms
       lettuce:
@@ -49,9 +51,9 @@ mybatis:
 
 # 千问API配置
 qianwen:
-  api-key: sk-a83fcef78af344cda2b94c0500c15fce
-  base-url: https://dashscope.aliyuncs.com/compatible-mode
-  model: qwen-plus
+  api-key: ${qianwen.api-key:${QIANWEN_API_KEY:}}
+  base-url: ${qianwen.base-url:${QIANWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}}
+  model: ${qianwen.model:${QIANWEN_MODEL:qwen3.5-flash}}
 
 # RAG知识库配置
 rag:
@@ -59,8 +61,8 @@ rag:
   default-top-k: 3
 
 milvus:
-  host: 118.190.206.152  # 或你的服务器IP
-  port: 19530
-  username: ""     # 默认无用户名
-  password: ""     # 默认无密码
-  database: default
+  host: ${milvus.host:${MILVUS_HOST:127.0.0.1}}
+  port: ${milvus.port:${MILVUS_PORT:19530}}
+  username: ${milvus.username:${MILVUS_USERNAME:}}
+  password: ${milvus.password:${MILVUS_PASSWORD:}}
+  database: ${milvus.database:${MILVUS_DATABASE:default}}

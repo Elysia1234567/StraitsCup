@@ -27,3 +27,6 @@ Thumbs.db
 *.tmp
 *.swp
 *~
+
+# Local private config
+BackEnd/src/main/resources/application-local.yml
