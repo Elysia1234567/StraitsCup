@@ -29,6 +29,17 @@
 
 常见业务状态码：`200` 成功，`400` 请求参数错误，`404` 资源不存在，`500` 服务端错误。实际 HTTP 状态通常仍为 `200`，业务结果以响应体中的 `code` 为准。
 
+通用错误响应示例：
+
+```json
+{
+  "code": 400,
+  "message": "参数错误",
+  "data": null,
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ## 接口总览
 
 | 方法 | 路径 | 模块 | 说明 |
@@ -69,6 +80,18 @@
 | --- | --- | --- | --- | --- |
 | `message` | string | 否 | `你好` | 用户输入 |
 
+请求示例：
+
+```bash
+curl "http://localhost:8081/api/aigc/chat?message=介绍一下福州寿山石雕"
+```
+
+响应示例：
+
+```text
+寿山石雕是福州代表性传统工艺之一，以寿山石为材料，常见题材包括人物、山水、花鸟和印章等。
+```
+
 ### GET `/api/aigc/stream`
 
 流式问答接口，返回 `text/event-stream`。服务端会先根据 `message` 检索 RAG 资料，再将拼接后的 prompt 交给模型流式输出。
@@ -78,6 +101,20 @@
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `message` | string | 否 | `你好，请自我介绍` | 用户输入 |
+
+请求示例：
+
+```bash
+curl -N "http://localhost:8081/api/aigc/stream?message=寿山石雕有什么特点"
+```
+
+响应示例：
+
+```text
+data: 寿山石雕
+data: 以石质温润
+data: 和雕刻精细见长
+```
 
 ### POST `/api/aigc/multimodal`
 
@@ -89,6 +126,25 @@
 {
   "imageUrl": "https://example.com/image.png",
   "question": "请描述这张图片"
+}
+```
+
+请求示例：
+
+```bash
+curl -X POST "http://localhost:8081/api/aigc/multimodal" \
+  -H "Content-Type: application/json" \
+  -d "{\"imageUrl\":\"https://example.com/image.png\",\"question\":\"请描述这张图片\"}"
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": "图片中展示了一件传统工艺作品，具有雕刻纹理和装饰性细节。",
+  "timestamp": "2026-05-03T10:00:00"
 }
 ```
 
@@ -108,9 +164,52 @@
 }
 ```
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "imageUrl": "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/chatroom/example.png",
+    "agentCode": "fz_shoushan_stone",
+    "agentName": "寿山石雕器灵",
+    "agentAvatar": "https://example.com/avatar.png",
+    "sourceImageUrl": "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/source/福州/寿山石雕.png",
+    "messageId": "101"
+  },
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### GET `/api/aigc/image/tasks/{taskId}`
 
 查询图片生成任务状态。
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": 1,
+    "taskId": "task_abc123",
+    "userId": 1,
+    "roomId": 1001,
+    "prompt": "生成一张寿山石雕风格海报",
+    "style": "国风插画",
+    "status": "SUCCEEDED",
+    "resultUrl": "https://example.com/generated.png",
+    "errorMessage": null,
+    "progress": 100,
+    "model": "qwen-image-2.0-pro",
+    "createTime": "2026-05-03T10:00:00",
+    "updateTime": "2026-05-03T10:00:30"
+  },
+  "timestamp": "2026-05-03T10:00:30"
+}
+```
 
 ## Agent
 
@@ -118,9 +217,39 @@
 
 获取当前启用的 Agent 列表。
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "agentCode": "fz_shoushan_stone",
+      "name": "寿山石雕器灵",
+      "avatar": "https://example.com/avatar.png",
+      "roleType": "HERITAGE_AGENT",
+      "personality": "沉稳、细致、熟悉寿山石文化",
+      "maxTokens": 1200,
+      "temperature": 0.7,
+      "topP": 0.9,
+      "status": 1
+    }
+  ],
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### GET `/api/agents/{code}`
 
 按 Agent 编码查询详情，例如 `fz_shoushan_stone`。
+
+请求示例：
+
+```bash
+curl "http://localhost:8081/api/agents/fz_shoushan_stone"
+```
 
 ## 多 Agent 问答
 
@@ -141,9 +270,52 @@
 }
 ```
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "多智能体问答成功",
+  "data": {
+    "sessionId": "session_001",
+    "query": "寿山石雕有哪些特点？",
+    "heritageId": "fz_shoushan_stone",
+    "finalAnswer": "寿山石雕的特点包括石质温润、色彩丰富、因材施艺和题材多样。",
+    "agentReplies": [
+      {
+        "agentCode": "fz_shoushan_stone",
+        "title": "寿山石雕器灵",
+        "content": "寿山石雕重视石色、纹理与雕刻题材的结合。",
+        "references": ["chunk-001"],
+        "searchUsed": false
+      }
+    ],
+    "retrievals": [
+      {
+        "id": "chunk-001",
+        "title": "寿山石雕",
+        "score": 0.92,
+        "content": "寿山石雕是福州传统工艺。",
+        "metadata": {
+          "city": "福州"
+        }
+      }
+    ],
+    "webSearchResult": null
+  },
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### GET `/api/chat/{sessionId}`
 
 查询指定会话最近一次多 Agent 问答结果。
+
+请求示例：
+
+```bash
+curl "http://localhost:8081/api/chat/session_001"
+```
 
 ## 聊天室
 
@@ -165,6 +337,31 @@
 }
 ```
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": 1001,
+    "roomCode": "ROOM202605030001",
+    "userId": 1,
+    "themeId": 1,
+    "name": "福州非遗讨论室",
+    "description": null,
+    "maxMembers": 6,
+    "memberCount": 2,
+    "messageCount": 0,
+    "status": 1,
+    "createTime": "2026-05-03T10:00:00",
+    "updateTime": "2026-05-03T10:00:00",
+    "isDeleted": 0
+  },
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### GET `/api/chat-rooms/{roomId}`
 
 获取聊天室详情。
@@ -177,6 +374,30 @@
 
 获取聊天室 Agent 成员列表。
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 10,
+      "roomId": 1001,
+      "memberType": "AGENT",
+      "agentId": 1,
+      "displayName": "寿山石雕器灵",
+      "avatar": "https://example.com/avatar.png",
+      "roleInRoom": "MEMBER",
+      "speakCount": 3,
+      "status": 1,
+      "joinTime": "2026-05-03T10:00:00"
+    }
+  ],
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### PUT `/api/chat-rooms/{roomId}/agents/{memberId}`
 
 替换指定聊天室成员对应的 Agent。
@@ -186,6 +407,27 @@
 ```json
 {
   "agentCode": "xm_bead_embroidery"
+}
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": 10,
+    "roomId": 1001,
+    "memberType": "AGENT",
+    "agentId": 4,
+    "displayName": "厦门珠绣器灵",
+    "avatar": "https://example.com/xm-avatar.png",
+    "roleInRoom": "MEMBER",
+    "speakCount": 0,
+    "status": 1
+  },
+  "timestamp": "2026-05-03T10:00:00"
 }
 ```
 
@@ -204,6 +446,31 @@
 | `page` | integer | 否 | `1` | 页码 |
 | `size` | integer | 否 | `20` | 每页数量 |
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 501,
+      "roomId": 1001,
+      "messageType": "TEXT",
+      "senderType": "USER",
+      "senderId": "1",
+      "senderName": "匿名用户",
+      "content": "介绍一下寿山石雕",
+      "imageUrl": null,
+      "isStream": 0,
+      "searchEnabled": 1,
+      "createTime": "2026-05-03T10:00:00"
+    }
+  ],
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### GET `/api/chat-rooms/{roomId}/messages/recent`
 
 获取最近历史消息。
@@ -220,6 +487,20 @@
 
 重建知识库：创建 Milvus collection、导入 JSONL 数据并建立索引。
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "ready": true,
+    "message": "RAG 知识库已重建"
+  },
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### GET `/api/rag/retrieve`
 
 向量检索调试接口。
@@ -231,11 +512,44 @@
 | `question` | string | 是 | - | 检索问题 |
 | `topK` | integer | 否 | `3` | 返回数量 |
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": "chunk-001",
+      "title": "寿山石雕",
+      "score": 0.92,
+      "content": "寿山石雕是福州传统工艺，强调因材施艺。",
+      "metadata": {
+        "city": "福州",
+        "category": "传统美术"
+      }
+    }
+  ],
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
+
 ### GET `/api/rag/prompt`
 
 预览拼接后的 RAG 上下文。
 
 查询参数同 `/api/rag/retrieve`。
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": "【检索资料】\n标题：寿山石雕\n内容：寿山石雕是福州传统工艺...",
+  "timestamp": "2026-05-03T10:00:00"
+}
+```
 
 ## 上传
 
@@ -256,6 +570,13 @@
   "url": "https://example.com/upload.png",
   "filename": "upload.png"
 }
+```
+
+请求示例：
+
+```bash
+curl -X POST "http://localhost:8081/api/upload/image" \
+  -F "file=@D:/tmp/example.png"
 ```
 
 ## WebSocket

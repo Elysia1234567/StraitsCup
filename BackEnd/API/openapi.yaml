@@ -55,6 +55,10 @@ paths:
             text/event-stream:
               schema:
                 type: string
+              example: |
+                data: 寿山石雕
+                data: 以石质温润
+                data: 和雕刻精细见长
   /api/aigc/multimodal:
     post:
       tags: [AIGC]
@@ -75,6 +79,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StringResult"
+              example:
+                code: 200
+                message: success
+                data: 图片中展示了一件传统工艺作品，具有雕刻纹理和装饰性细节。
+                timestamp: "2026-05-03T10:00:00"
   /api/aigc/image:
     post:
       tags: [AIGC]
@@ -93,6 +102,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ImageGenerateResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  imageUrl: https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/chatroom/example.png
+                  agentCode: fz_shoushan_stone
+                  agentName: 寿山石雕器灵
+                  agentAvatar: https://example.com/avatar.png
+                  sourceImageUrl: https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/source/福州/寿山石雕.png
+                  messageId: "101"
+                timestamp: "2026-05-03T10:00:00"
   /api/aigc/image/tasks/{taskId}:
     get:
       tags: [AIGC]
@@ -110,6 +130,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ImageGenerationTaskResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  taskId: task_abc123
+                  userId: 1
+                  roomId: 1001
+                  prompt: 生成一张寿山石雕风格海报
+                  style: 国风插画
+                  status: SUCCEEDED
+                  resultUrl: https://example.com/generated.png
+                  errorMessage: null
+                  progress: 100
+                  model: qwen-image-2.0-pro
+                  createTime: "2026-05-03T10:00:00"
+                  updateTime: "2026-05-03T10:00:30"
+                timestamp: "2026-05-03T10:00:30"
   /api/agents:
     get:
       tags: [Agent]
@@ -121,6 +159,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AgentListResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: 1
+                    agentCode: fz_shoushan_stone
+                    name: 寿山石雕器灵
+                    avatar: https://example.com/avatar.png
+                    roleType: HERITAGE_AGENT
+                    personality: 沉稳、细致、熟悉寿山石文化
+                    maxTokens: 1200
+                    temperature: 0.7
+                    topP: 0.9
+                    status: 1
+                timestamp: "2026-05-03T10:00:00"
   /api/agents/{code}:
     get:
       tags: [Agent]
@@ -139,6 +192,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AgentResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1
+                  agentCode: fz_shoushan_stone
+                  name: 寿山石雕器灵
+                  avatar: https://example.com/avatar.png
+                  roleType: HERITAGE_AGENT
+                  personality: 沉稳、细致、熟悉寿山石文化
+                  knowledgeScope: 福州寿山石雕
+                  languageStyle: 温和讲解
+                  maxTokens: 1200
+                  temperature: 0.7
+                  topP: 0.9
+                  isPreset: 1
+                  sortOrder: 1
+                  status: 1
+                  isDeleted: 0
+                timestamp: "2026-05-03T10:00:00"
         "404":
           $ref: "#/components/responses/NotFound"
   /api/chat:
@@ -158,6 +231,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MultiAgentChatResult"
+              example:
+                code: 200
+                message: 多智能体问答成功
+                data:
+                  sessionId: session_001
+                  query: 寿山石雕有哪些特点？
+                  heritageId: fz_shoushan_stone
+                  finalAnswer: 寿山石雕的特点包括石质温润、色彩丰富、因材施艺和题材多样。
+                  agentReplies:
+                    - agentCode: fz_shoushan_stone
+                      title: 寿山石雕器灵
+                      content: 寿山石雕重视石色、纹理与雕刻题材的结合。
+                      references:
+                        - chunk-001
+                      searchUsed: false
+                  retrievals:
+                    - id: chunk-001
+                      title: 寿山石雕
+                      score: 0.92
+                      content: 寿山石雕是福州传统工艺。
+                      metadata:
+                        city: 福州
+                  webSearchResult: null
+                timestamp: "2026-05-03T10:00:00"
   /api/chat/{sessionId}:
     get:
       tags: [Chat]
@@ -175,6 +272,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MultiAgentChatResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  sessionId: session_001
+                  query: 寿山石雕有哪些特点？
+                  heritageId: fz_shoushan_stone
+                  finalAnswer: 寿山石雕的特点包括石质温润、色彩丰富、因材施艺和题材多样。
+                  agentReplies: []
+                  retrievals: []
+                  webSearchResult: null
+                timestamp: "2026-05-03T10:00:00"
         "404":
           $ref: "#/components/responses/NotFound"
   /api/chat-rooms:
@@ -188,6 +297,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatRoomListResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: 1001
+                    roomCode: ROOM202605030001
+                    userId: 1
+                    themeId: 1
+                    name: 福州非遗讨论室
+                    maxMembers: 6
+                    memberCount: 2
+                    messageCount: 8
+                    status: 1
+                    createTime: "2026-05-03T10:00:00"
+                    updateTime: "2026-05-03T10:05:00"
+                    isDeleted: 0
+                timestamp: "2026-05-03T10:00:00"
     post:
       tags: [ChatRoom]
       summary: 创建聊天室
@@ -204,6 +330,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatRoomResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1001
+                  roomCode: ROOM202605030001
+                  userId: 1
+                  themeId: 1
+                  name: 福州非遗讨论室
+                  description: null
+                  maxMembers: 6
+                  memberCount: 2
+                  messageCount: 0
+                  status: 1
+                  createTime: "2026-05-03T10:00:00"
+                  updateTime: "2026-05-03T10:00:00"
+                  isDeleted: 0
+                timestamp: "2026-05-03T10:00:00"
   /api/chat-rooms/{roomId}:
     get:
       tags: [ChatRoom]
@@ -217,6 +361,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatRoomResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 1001
+                  roomCode: ROOM202605030001
+                  userId: 1
+                  themeId: 1
+                  name: 福州非遗讨论室
+                  description: null
+                  maxMembers: 6
+                  memberCount: 2
+                  messageCount: 8
+                  status: 1
+                  createTime: "2026-05-03T10:00:00"
+                  updateTime: "2026-05-03T10:05:00"
+                  isDeleted: 0
+                timestamp: "2026-05-03T10:00:00"
     delete:
       tags: [ChatRoom]
       summary: 解散聊天室
@@ -229,6 +391,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VoidResult"
+              example:
+                code: 200
+                message: success
+                data: null
+                timestamp: "2026-05-03T10:00:00"
   /api/chat-rooms/{roomId}/agents:
     get:
       tags: [ChatRoom]
@@ -242,6 +409,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatRoomMemberListResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: 10
+                    roomId: 1001
+                    memberType: AGENT
+                    userId: null
+                    agentId: 1
+                    displayName: 寿山石雕器灵
+                    avatar: https://example.com/avatar.png
+                    roleInRoom: MEMBER
+                    lastSpeakTime: "2026-05-03T10:04:00"
+                    speakCount: 3
+                    joinTime: "2026-05-03T10:00:00"
+                    status: 1
+                    isDeleted: 0
+                timestamp: "2026-05-03T10:00:00"
   /api/chat-rooms/{roomId}/agents/{memberId}:
     put:
       tags: [ChatRoom]
@@ -262,6 +447,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatRoomMemberResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  id: 10
+                  roomId: 1001
+                  memberType: AGENT
+                  agentId: 4
+                  displayName: 厦门珠绣器灵
+                  avatar: https://example.com/xm-avatar.png
+                  roleInRoom: MEMBER
+                  speakCount: 0
+                  status: 1
+                timestamp: "2026-05-03T10:00:00"
         "400":
           $ref: "#/components/responses/BadRequest"
     delete:
@@ -277,6 +476,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VoidResult"
+              example:
+                code: 200
+                message: success
+                data: null
+                timestamp: "2026-05-03T10:00:00"
         "400":
           $ref: "#/components/responses/BadRequest"
   /api/chat-rooms/{roomId}/messages:
@@ -306,6 +510,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatMessageListResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: 501
+                    roomId: 1001
+                    messageType: TEXT
+                    senderType: USER
+                    senderId: "1"
+                    senderName: 匿名用户
+                    content: 介绍一下寿山石雕
+                    imageUrl: null
+                    isStream: 0
+                    searchEnabled: 1
+                    createTime: "2026-05-03T10:00:00"
+                timestamp: "2026-05-03T10:00:00"
   /api/chat-rooms/{roomId}/messages/recent:
     get:
       tags: [ChatRoom]
@@ -326,6 +546,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatMessageListResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: 502
+                    roomId: 1001
+                    messageType: TEXT
+                    senderType: AGENT
+                    senderId: fz_shoushan_stone
+                    senderName: 寿山石雕器灵
+                    content: 寿山石雕以石色天然、雕工细腻见长。
+                    isStream: 0
+                    searchEnabled: 1
+                    createTime: "2026-05-03T10:01:00"
+                timestamp: "2026-05-03T10:01:00"
   /api/rag/reload:
     post:
       tags: [RAG]
@@ -337,6 +572,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RagReloadResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  ready: true
+                  message: RAG 知识库已重建
+                timestamp: "2026-05-03T10:00:00"
   /api/rag/retrieve:
     get:
       tags: [RAG]
@@ -351,6 +593,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RagRetrievalListResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: chunk-001
+                    title: 寿山石雕
+                    score: 0.92
+                    content: 寿山石雕是福州传统工艺，强调因材施艺。
+                    metadata:
+                      city: 福州
+                      category: 传统美术
+                timestamp: "2026-05-03T10:00:00"
   /api/rag/prompt:
     get:
       tags: [RAG]
@@ -365,6 +619,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StringResult"
+              example:
+                code: 200
+                message: success
+                data: "【检索资料】\n标题：寿山石雕\n内容：寿山石雕是福州传统工艺..."
+                timestamp: "2026-05-03T10:00:00"
   /api/upload/image:
     post:
       tags: [Upload]
@@ -387,6 +646,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UploadImageResult"
+              example:
+                code: 200
+                message: success
+                data:
+                  url: https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/upload/example.png
+                  filename: example.png
+                timestamp: "2026-05-03T10:00:00"
 x-websocket:
   /ws/chat:
     summary: 聊天室实时消息通道
@@ -471,6 +737,7 @@ components:
       example:
         code: 400
         message: 参数错误
+        data: null
         timestamp: "2026-05-03T10:00:00"
     VoidResult:
       allOf:
@@ -688,12 +955,20 @@ components:
           items:
             type: string
       required: [name]
+      example:
+        name: 福州非遗讨论室
+        themeId: 1
+        agentCodes:
+          - fz_shoushan_stone
+          - fz_cork_scene
     ReplaceRoomAgentRequest:
       type: object
       properties:
         agentCode:
           type: string
       required: [agentCode]
+      example:
+        agentCode: xm_bead_embroidery
     Agent:
       type: object
       properties:
@@ -982,3 +1257,11 @@ components:
           format: date-time
         onlineCount:
           type: integer
+      example:
+        type: CHAT
+        senderType: USER
+        content: 介绍一下寿山石雕
+        imageUrl: null
+        metadata:
+          searchEnabled: true
+          ragEnabled: true
