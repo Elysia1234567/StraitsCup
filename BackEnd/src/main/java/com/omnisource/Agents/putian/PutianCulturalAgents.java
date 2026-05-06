@@ -58,7 +58,7 @@ public final class PutianCulturalAgents {
         return AgentDefinition.builder()
                 .agentCode(code)
                 .name(name)
-                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/chatroom/agents/" + code + ".png")
+                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png")
                 .roleType("IMMERSIVE_SPIRIT")
                 .personality(personality)
                 .promptTemplate(prompt(theme, identity, style))

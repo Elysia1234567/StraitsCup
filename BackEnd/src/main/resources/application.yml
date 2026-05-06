@@ -73,7 +73,7 @@ aliyun:
     folder: ${ALIYUN_OSS_FOLDER:OmniSource/}
     public-base-url: ${ALIYUN_OSS_PUBLIC_BASE_URL:https://java-ai-fzu.oss-cn-beijing.aliyuncs.com}
     appearance-folder: ${ALIYUN_OSS_APPEARANCE_FOLDER:OmniSource/appearance/}
-    agent-image-folder: ${ALIYUN_OSS_AGENT_IMAGE_FOLDER:OmniSource/chatroom/agents/}
+    agent-image-folder: ${ALIYUN_OSS_AGENT_IMAGE_FOLDER:OmniSource/chatroom/}
 
 # Tavily
 tavily:

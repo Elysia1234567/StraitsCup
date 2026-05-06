@@ -1,11 +1,14 @@
 package com.omnisource.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.omnisource.entity.ChatRoom;
 import com.omnisource.entity.ImageGenerationTask;
 import com.omnisource.exception.BusinessException;
 import com.omnisource.exception.CommonErrorCode;
 import com.omnisource.mapper.ImageGenerationTaskMapper;
+import com.omnisource.service.ChatRoomService;
 import com.omnisource.service.ImageGenerationService;
+import com.omnisource.service.OssUploadService;
 import com.omnisource.websocket.WebSocketSessionManager;
 import com.omnisource.websocket.dto.WebSocketMessage;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,11 +42,13 @@ public class ImageGenerationServiceImpl implements ImageGenerationService {
     private final ImageGenerationTaskMapper taskMapper;
     private final WebSocketSessionManager sessionManager;
     private final StringRedisTemplate redisTemplate;
+    private final ChatRoomService chatRoomService;
+    private final OssUploadService ossUploadService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
     private final Object imageGenerationLock = new Object();
 
-    @Value("${aliyun.oss.agent-image-folder:OmniSource/chatroom/agents/}")
+    @Value("${aliyun.oss.agent-image-folder:OmniSource/chatroom/}")
     private String agentImageFolder;
 
     @Value("${qianwen.image-model:qwen-image-2.0-pro}")
@@ -96,7 +102,7 @@ public class ImageGenerationServiceImpl implements ImageGenerationService {
             synchronized (imageGenerationLock) {
                 imageUrl = generateImage(task.getPrompt(), referenceImageUrl);
             }
-            log.info("Agent generated image target OSS folder: {}", agentImageFolder);
+            imageUrl = uploadGeneratedImageToRoom(imageUrl, task);
             updateTaskStatus(taskId, "SUCCESS", 100, imageUrl, null);
             return imageUrl;
         } catch (Exception e) {
@@ -143,7 +149,7 @@ public class ImageGenerationServiceImpl implements ImageGenerationService {
             synchronized (imageGenerationLock) {
                 imageUrl = generateImage(task.getPrompt(), null);
             }
-            log.info("Agent generated image target OSS folder: {}", agentImageFolder);
+            imageUrl = uploadGeneratedImageToRoom(imageUrl, task);
 
             updateTaskStatus(taskId, "SUCCESS", 100, imageUrl, null);
             broadcastProgress(task.getRoomId(), taskId, 100);
@@ -225,6 +231,72 @@ public class ImageGenerationServiceImpl implements ImageGenerationService {
             throw new IllegalStateException("Failed to parse " + imageModel + " response: " + e.getMessage(), e);
         }
         throw new IllegalStateException(imageModel + " response does not contain image url");
+    }
+
+    private String uploadGeneratedImageToRoom(String generatedImageUrl, ImageGenerationTask task) {
+        if (!StringUtils.hasText(generatedImageUrl)) {
+            return generatedImageUrl;
+        }
+
+        String targetFolder = buildRoomAgentImageFolder(task.getRoomId());
+        try {
+            byte[] imageBytes = restTemplate.getForObject(generatedImageUrl, byte[].class);
+            if (imageBytes == null || imageBytes.length == 0) {
+                throw new IllegalStateException("Generated image download returned empty content");
+            }
+            String uploadedUrl = ossUploadService.uploadImage(
+                    new ByteArrayInputStream(imageBytes),
+                    task.getTaskId() + ".png",
+                    targetFolder
+            );
+            log.info("Agent generated image uploaded to OSS folder: {}", targetFolder);
+            return uploadedUrl;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to upload generated image to OSS: " + e.getMessage(), e);
+        }
+    }
+
+    private String buildRoomAgentImageFolder(Long roomId) {
+        String roomSegment = roomId == null ? "unbound" : "room-" + roomId;
+        if (roomId != null) {
+            ChatRoom room = chatRoomService.getRoomById(roomId);
+            if (room != null && StringUtils.hasText(room.getRoomCode())) {
+                roomSegment = room.getRoomCode();
+                String safeRoomName = sanitizeOssPathSegment(room.getName());
+                if (StringUtils.hasText(safeRoomName)) {
+                    roomSegment += "-" + safeRoomName;
+                }
+            }
+        }
+        return normalizeChatroomRootFolder(agentImageFolder) + roomSegment + "/agents/";
+    }
+
+    private String sanitizeOssPathSegment(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (Character.isLetterOrDigit(ch) || ch == '_' || ch == '-') {
+                builder.append(ch);
+            } else if (Character.isWhitespace(ch)) {
+                builder.append('_');
+            }
+        }
+        String sanitized = builder.toString();
+        return sanitized.length() > 32 ? sanitized.substring(0, 32) : sanitized;
+    }
+
+    private String normalizeChatroomRootFolder(String value) {
+        String normalized = value == null ? "" : value.trim().replace("\\", "/");
+        normalized = normalized.startsWith("/") ? normalized.substring(1) : normalized;
+        normalized = normalized.endsWith("/") ? normalized : normalized + "/";
+        if (normalized.endsWith("agents/")) {
+            normalized = normalized.substring(0, normalized.length() - "agents/".length());
+        }
+        return normalized;
     }
 
     private String buildStyledPrompt(String prompt, String style) {

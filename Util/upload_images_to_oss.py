@@ -3,7 +3,7 @@ Batch upload local images to Aliyun OSS.
 
 Default behavior:
 - Read OSS config from the repository root .env file.
-- Walk D:/Junior/OmniSource/images.
+- Walk D:/Junior/OmniSource/福州+厦门+泉州+漳州+莆田/福州+厦门+泉州+漳州+莆田.
 - Upload each city folder into OSS under OmniSource/source/<city>/.
 
 Run from repository root:
@@ -151,8 +151,9 @@ def required(values: Dict[str, str], key: str) -> str:
 
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
+    default_images_dir = repo_root / "福州+厦门+泉州+漳州+莆田" / "福州+厦门+泉州+漳州+莆田"
     parser = argparse.ArgumentParser(description="Upload images directory to Aliyun OSS.")
-    parser.add_argument("--images-dir", type=Path, default=repo_root / "images")
+    parser.add_argument("--images-dir", type=Path, default=default_images_dir)
     parser.add_argument("--env-file", type=Path, default=repo_root / ".env")
     parser.add_argument("--oss-prefix", default="OmniSource/source/")
     parser.add_argument("--dry-run", action="store_true")

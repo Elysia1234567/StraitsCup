@@ -42,12 +42,22 @@ public class OssUploadServiceImpl implements OssUploadService {
 
     @Override
     public String uploadImage(MultipartFile file, String targetFolder) {
+        try {
+            return uploadImage(file.getInputStream(), file.getOriginalFilename(), targetFolder);
+        } catch (Exception e) {
+            log.error("OSS上传失败", e);
+            throw new RuntimeException("图片上传失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public String uploadImage(InputStream inputStream, String originalFilename, String targetFolder) {
         OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
-        try (InputStream inputStream = file.getInputStream()) {
+        try (InputStream in = inputStream) {
             String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
             String fileName = normalizeFolder(targetFolder) + datePath + "/" + UUID.randomUUID().toString().replace("-", "")
-                    + getExtension(file.getOriginalFilename());
-            ossClient.putObject(bucketName, fileName, inputStream);
+                    + getExtension(originalFilename);
+            ossClient.putObject(bucketName, fileName, in);
             return normalizeBaseUrl(publicBaseUrl) + "/" + fileName;
         } catch (Exception e) {
             log.error("OSS上传失败", e);
