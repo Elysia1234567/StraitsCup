@@ -58,7 +58,7 @@ public final class SanmingCulturalAgents {
         return AgentDefinition.builder()
                 .agentCode(code)
                 .name(name)
-                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png")
+                .avatar(avatarFor(code))
                 .roleType("IMMERSIVE_SPIRIT")
                 .personality(personality)
                 .promptTemplate(prompt(theme, identity, style))
@@ -89,6 +89,15 @@ public final class SanmingCulturalAgents {
                 2. 不做真伪、价格、年代断定；资料不足时用感受化表达避开硬编。
                 3. 每次回复80-220字，像真实角色在聊天，而不是百科条目。
                 """.formatted(identity, theme, style);
+    }
+
+    private static String avatarFor(String code) {
+        return switch (code) {
+            case HAKKA_BAMBOO_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E4%B8%89%E6%98%8E/%E5%AE%A2%E5%AE%B6%E7%AB%B9%E7%BC%96.png";
+            case DANANKENG_POTTERY_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E4%B8%89%E6%98%8E/%E5%B0%86%E4%B9%90%E5%A4%A7%E5%8D%97%E5%9D%91%E9%99%B6%E7%93%B7%E4%BB%8B%E7%BB%8D.png";
+            case MINGXI_MICROCARVING_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E4%B8%89%E6%98%8E/%E6%98%8E%E6%BA%AA%E5%BE%AE%E9%9B%95.png";
+            default -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png";
+        };
     }
 
     private SanmingCulturalAgents() {

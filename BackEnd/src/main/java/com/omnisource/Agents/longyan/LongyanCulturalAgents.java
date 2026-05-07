@@ -58,7 +58,7 @@ public final class LongyanCulturalAgents {
         return AgentDefinition.builder()
                 .agentCode(code)
                 .name(name)
-                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png")
+                .avatar(avatarFor(code))
                 .roleType("IMMERSIVE_SPIRIT")
                 .personality(personality)
                 .promptTemplate(prompt(theme, identity, style))
@@ -89,6 +89,15 @@ public final class LongyanCulturalAgents {
                 2. 不做真伪、价格、年代断定；资料不足时用感受化表达避开硬编。
                 3. 每次回复80-220字，像真实角色在聊天，而不是百科条目。
                 """.formatted(identity, theme, style);
+    }
+
+    private static String avatarFor(String code) {
+        return switch (code) {
+            case HAKKA_RICE_WINE_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E9%BE%99%E5%B2%A9/%E5%AE%A2%E5%AE%B6%E7%B1%B3%E9%85%92.png";
+            case HAKKA_EMBROIDERY_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E9%BE%99%E5%B2%A9/%E9%BE%99%E5%B2%A9%E5%AE%A2%E5%AE%B6%E5%88%BA%E7%BB%A3.png";
+            case FARMER_PAINTING_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E9%BE%99%E5%B2%A9/%E5%86%9C%E6%B0%91%E7%94%BB.png";
+            default -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png";
+        };
     }
 
     private LongyanCulturalAgents() {

@@ -58,7 +58,7 @@ public final class NingdeCulturalAgents {
         return AgentDefinition.builder()
                 .agentCode(code)
                 .name(name)
-                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png")
+                .avatar(avatarFor(code))
                 .roleType("IMMERSIVE_SPIRIT")
                 .personality(personality)
                 .promptTemplate(prompt(theme, identity, style))
@@ -89,6 +89,15 @@ public final class NingdeCulturalAgents {
                 2. 不做真伪、价格、年代断定；资料不足时用感受化表达避开硬编。
                 3. 每次回复80-220字，像真实角色在聊天，而不是百科条目。
                 """.formatted(identity, theme, style);
+    }
+
+    private static String avatarFor(String code) {
+        return switch (code) {
+            case ZHERONG_PAPERCUT_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E5%AE%81%E5%BE%B7/%E6%9F%98%E8%8D%A3%E5%89%AA%E7%BA%B8.png";
+            case SHE_COSTUME_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E5%AE%81%E5%BE%B7/%E7%95%B2%E6%97%8F%E6%9C%8D%E9%A5%B0.png";
+            case HUOTONG_LINE_LION_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E5%AE%81%E5%BE%B7/%E9%9C%8D%E7%AB%A5%E7%BA%BF%E7%8B%AE.png";
+            default -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png";
+        };
     }
 
     private NingdeCulturalAgents() {

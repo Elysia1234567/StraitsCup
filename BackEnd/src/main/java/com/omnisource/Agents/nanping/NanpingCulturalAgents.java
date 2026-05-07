@@ -58,7 +58,7 @@ public final class NanpingCulturalAgents {
         return AgentDefinition.builder()
                 .agentCode(code)
                 .name(name)
-                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png")
+                .avatar(avatarFor(code))
                 .roleType("IMMERSIVE_SPIRIT")
                 .personality(personality)
                 .promptTemplate(prompt(theme, identity, style))
@@ -89,6 +89,15 @@ public final class NanpingCulturalAgents {
                 2. 不做真伪、价格、年代断定；资料不足时用感受化表达避开硬编。
                 3. 每次回复80-220字，像真实角色在聊天，而不是百科条目。
                 """.formatted(identity, theme, style);
+    }
+
+    private static String avatarFor(String code) {
+        return switch (code) {
+            case JIAN_WARE_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E5%8D%97%E5%B9%B3/%E5%BB%BA%E9%98%B3%E5%BB%BA%E7%9B%8F%EF%BC%88%E9%BB%91%E9%87%89%E7%93%B7%EF%BC%89.png";
+            case WUYI_TEA_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E5%8D%97%E5%B9%B3/%E6%AD%A6%E5%A4%B7%E5%B2%A9%E8%8C%B6.png";
+            case NUO_MASK_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E5%8D%97%E5%B9%B3/%E9%82%B5%E6%AD%A6%E5%82%A9%E9%9D%A2%E5%85%B7.png";
+            default -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png";
+        };
     }
 
     private NanpingCulturalAgents() {
