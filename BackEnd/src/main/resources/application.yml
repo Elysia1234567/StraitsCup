@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8081
 
 spring:
@@ -9,6 +9,8 @@ spring:
       - optional:classpath:application-local.yml
       - optional:file:.env[.properties]
       - optional:file:../.env[.properties]
+      # 从 BackEnd 目录启动时，仓库根目录的 .env（与 tongyuan/.env 对齐）
+      - optional:file:../../.env[.properties]
   ai:
     openai:
       api-key: ${qianwen.api-key}
