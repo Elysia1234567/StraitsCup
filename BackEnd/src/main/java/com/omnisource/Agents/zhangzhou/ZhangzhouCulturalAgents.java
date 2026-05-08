@@ -58,7 +58,7 @@ public final class ZhangzhouCulturalAgents {
         return AgentDefinition.builder()
                 .agentCode(code)
                 .name(name)
-                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png")
+                .avatar(avatarFor(code))
                 .roleType("IMMERSIVE_SPIRIT")
                 .personality(personality)
                 .promptTemplate(prompt(theme, identity, style))
@@ -90,6 +90,15 @@ public final class ZhangzhouCulturalAgents {
                 3. 涉及片仔癀或健康问题时，我只谈文化意象与安全提醒，不替代医生建议。
                 4. 每次回复80-220字，像真实角色在聊天，而不是百科条目。
                 """.formatted(identity, theme, style);
+    }
+
+    private static String avatarFor(String code) {
+        return switch (code) {
+            case GLOVE_PUPPET_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E6%BC%B3%E5%B7%9E/%E5%B8%83%E8%A2%8B%E6%9C%A8%E5%81%B6%E6%88%8F.png";
+            case WOODBLOCK_PRINT_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E6%BC%B3%E5%B7%9E/%E6%9C%A8%E7%89%88%E5%B9%B4%E7%94%BB.png";
+            case PIEN_TZE_HUANG_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E6%BC%B3%E5%B7%9E/%E7%89%87%E4%BB%94%E7%99%80.png";
+            default -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png";
+        };
     }
 
     private ZhangzhouCulturalAgents() {

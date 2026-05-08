@@ -10,6 +10,7 @@ import AgentCard from '../components/agent/AgentCard.vue';
 import { ChevronDoubleRightIcon } from '@heroicons/vue/24/outline';
 import { useMultiAgentChat } from '@/composables/useMultiAgentChat.js';
 import * as chatApi from '@/api/chatApi.js';
+import { toAgentViewModel } from '@/utils/agentAssets.js';
 
 const LAST_ROOM_KEY = 'inspira_last_room_id';
 
@@ -73,7 +74,7 @@ async function loadAgentCatalog() {
       id: a.id,
       agentCode: a.agentCode,
       name: a.name,
-      avatar: a.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(a.agentCode || a.name)}`,
+      ...toAgentViewModel(a),
       description: a.personality || a.knowledgeScope || a.roleType || '非遗文化主题智能体',
       official: true,
       new: false,
@@ -140,9 +141,26 @@ const handleSendMessage = (payload) => {
   activeView.value = 'chat';
   const text = typeof payload === 'string' ? payload : payload?.text;
   const searchEnabled = typeof payload === 'object' && payload ? !!payload.searchEnabled : false;
-  const ragEnabled = typeof payload === 'object' && payload ? !!payload.ragEnabled : false;
+  const imageMode = typeof payload === 'object' && payload ? !!payload.imageMode : false;
   if (!text?.trim()) return;
-  sendUserMessage(text, { searchEnabled, ragEnabled });
+  if (imageMode) {
+    const primaryAgent = roomChatAgents.value?.[0];
+    const agentCode = primaryAgent?.agentCode;
+    if (!agentCode) {
+      bootError.value = '当前房间没有可用的智能体';
+      return;
+    }
+    chatApi.generateAgentImage({
+      userId: 1,
+      roomId: currentRoomId.value,
+      prompt: text.trim(),
+      agentCode,
+    }).catch((e) => {
+      bootError.value = e instanceof Error ? e.message : String(e);
+    });
+    return;
+  }
+  sendUserMessage(text, { searchEnabled });
 };
 
 const handleNewChat = async () => {

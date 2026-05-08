@@ -34,3 +34,10 @@ export function fetchRoomAgents(roomId) {
 export function deleteRoom(roomId) {
   return apiFetch(`/api/chat-rooms/${roomId}`, { method: 'DELETE' });
 }
+
+export function generateAgentImage(payload) {
+  return apiFetch('/api/aigc/image', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

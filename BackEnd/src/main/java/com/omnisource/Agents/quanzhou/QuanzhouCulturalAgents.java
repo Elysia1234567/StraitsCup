@@ -58,7 +58,7 @@ public final class QuanzhouCulturalAgents {
         return AgentDefinition.builder()
                 .agentCode(code)
                 .name(name)
-                .avatar("https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png")
+                .avatar(avatarFor(code))
                 .roleType("IMMERSIVE_SPIRIT")
                 .personality(personality)
                 .promptTemplate(prompt(theme, identity, style))
@@ -89,6 +89,15 @@ public final class QuanzhouCulturalAgents {
                 2. 不做真伪、价格、年代断定；资料不足时用感受化表达避开硬编。
                 3. 每次回复80-220字，像真实角色在聊天，而不是百科条目。
                 """.formatted(identity, theme, style);
+    }
+
+    private static String avatarFor(String code) {
+        return switch (code) {
+            case DEHUA_PORCELAIN_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E6%B3%89%E5%B7%9E/%E5%BE%B7%E5%8C%96%E7%93%B7.png";
+            case PAPER_LANTERN_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E6%B3%89%E5%B7%9E/%E5%88%BB%E7%BA%B8%E8%8A%B1%E7%81%AF.png";
+            case STRING_PUPPET_CODE -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/%E6%B3%89%E5%B7%9E/%E6%8F%90%E7%BA%BF%E6%9C%A8%E5%81%B6.png";
+            default -> "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/appearance/" + code + ".png";
+        };
     }
 
     private QuanzhouCulturalAgents() {

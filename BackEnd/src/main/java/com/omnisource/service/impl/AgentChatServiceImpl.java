@@ -65,7 +65,7 @@ public class AgentChatServiceImpl implements AgentChatService {
 
     @Override
     public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl, boolean searchEnabled) {
-        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, false);
+        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, true);
     }
 
     @Override
@@ -251,7 +251,7 @@ public class AgentChatServiceImpl implements AgentChatService {
     @Override
     public Flux<String> streamAgentResponse(Long roomId, Long agentId, List<ChatMessage> history,
                                              String userMessage, String imageUrl, boolean searchEnabled) {
-        return streamAgentResponse(roomId, agentId, history, userMessage, imageUrl, searchEnabled, false);
+        return streamAgentResponse(roomId, agentId, history, userMessage, imageUrl, searchEnabled, true);
     }
 
     @Override

@@ -1,5 +1,6 @@
 import { ref, shallowRef, onUnmounted } from 'vue';
 import * as chatApi from '@/api/chatApi.js';
+import { toAgentViewModel } from '@/utils/agentAssets.js';
 
 function mapHistoryMessage(m) {
   const base = {
@@ -8,7 +9,7 @@ function mapHistoryMessage(m) {
     streamId: m.streamId,
     senderType: m.senderType,
     senderName: m.senderName,
-    senderAvatar: m.senderAvatar,
+    senderAvatar: toAgentViewModel({ agentCode: m.senderId, avatar: m.senderAvatar }).avatar,
     content: m.content ?? '',
     imageUrl: m.imageUrl,
     messageType: m.messageType,
@@ -123,7 +124,7 @@ export function useMultiAgentChat() {
           streamId: msg.streamId,
           senderId: msg.senderId,
           senderName: msg.senderName,
-          senderAvatar: msg.senderAvatar,
+          senderAvatar: toAgentViewModel({ agentCode: msg.senderId, avatar: msg.senderAvatar }).avatar,
           content: '',
           streaming: true,
           messageType: 'TEXT',
@@ -161,7 +162,7 @@ export function useMultiAgentChat() {
             messageId: msg.messageId,
             senderId: msg.senderId,
             senderName: msg.senderName,
-            senderAvatar: msg.senderAvatar,
+            senderAvatar: toAgentViewModel({ agentCode: msg.senderId, avatar: msg.senderAvatar }).avatar,
             content: msg.content || '',
             imageUrl: msg.imageUrl,
             messageType: 'IMAGE',
@@ -193,16 +194,21 @@ export function useMultiAgentChat() {
   async function loadRoomChatAgents(roomId) {
     roomChatAgents.value = [];
     try {
-      const members = await chatApi.fetchRoomAgents(roomId);
+      const [members, agents] = await Promise.all([
+        chatApi.fetchRoomAgents(roomId),
+        chatApi.fetchAgents(),
+      ]);
+      const agentMap = new Map((agents || []).map((agent) => [agent.id, agent]));
       roomChatAgents.value = (members || [])
         .filter((m) => m.memberType === 'AGENT' && m.agentId != null)
         .map((m) => ({
           id: m.id,
           agentId: m.agentId,
           name: m.displayName || '智能体',
-          avatar:
-            m.avatar ||
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(String(m.agentId))}`,
+          avatar: toAgentViewModel(agentMap.get(m.agentId) || { avatar: m.avatar }).avatar,
+          agentCode: agentMap.get(m.agentId)?.agentCode,
+          appearanceUrl: toAgentViewModel(agentMap.get(m.agentId) || { avatar: m.avatar }).appearanceUrl,
+          sourceImageUrl: toAgentViewModel(agentMap.get(m.agentId) || {}).sourceImageUrl,
         }));
     } catch {
       roomChatAgents.value = [];
@@ -253,7 +259,7 @@ export function useMultiAgentChat() {
     return room;
   }
 
-  function sendUserMessage(text, { searchEnabled = false, ragEnabled = false } = {}) {
+  function sendUserMessage(text, { searchEnabled = false } = {}) {
     if (!ws.value || ws.value.readyState !== WebSocket.OPEN || !currentRoomId.value) {
       wsError.value = '未连接到聊天室';
       return;
@@ -273,7 +279,6 @@ export function useMultiAgentChat() {
       content: trimmed,
       metadata: {
         searchEnabled,
-        ragEnabled,
       },
     };
     ws.value.send(JSON.stringify(payload));
