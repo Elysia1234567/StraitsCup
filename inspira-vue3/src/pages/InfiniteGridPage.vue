@@ -4,7 +4,6 @@ import { ref, useTemplateRef } from "vue";
 import { useRouter } from "vue-router";
 import InfiniteGrid from "../components/ui/infinite-grid/infiniteGrid.vue";
 import AnimatedActionButton from "../components/ui/AnimatedActionButton.vue";
-import SiteHeader from "../components/SiteHeader.vue";
 import type { CardData } from "../components/ui/infinite-grid/types";
 import { HOME_GALLERY_ITEMS } from "../data/homeGalleryConfig";
 
@@ -36,8 +35,6 @@ function onTileClicked() {
 
 <template>
   <main class="relative min-h-screen overflow-hidden bg-[#05070f] text-white">
-    <SiteHeader />
-
     <section
       ref="el"
       class="relative min-h-screen"

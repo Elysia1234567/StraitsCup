@@ -1,0 +1,72 @@
+/* 赛博朋克主题令牌 — 各页 @import，勿在 uni.scss 用相对路径 import 其它文件 */
+
+$cyber-bg-void: #030308;
+$cyber-bg-deep: #0a0a14;
+$cyber-bg-panel: rgba(12, 18, 40, 0.72);
+$cyber-cyan: #00f5ff;
+$cyber-cyan-dim: rgba(0, 245, 255, 0.35);
+$cyber-magenta: #ff2ee6;
+$cyber-magenta-dim: rgba(255, 46, 230, 0.4);
+$cyber-purple: #b967ff;
+$cyber-text: #e8f4ff;
+$cyber-text-muted: #7a8fb2;
+
+@mixin cyber-bg-grid {
+  background-color: $cyber-bg-deep;
+  background-image:
+    linear-gradient(180deg, rgba(5, 8, 24, 0.97) 0%, rgba(10, 5, 28, 0.95) 50%, rgba(3, 8, 22, 0.98) 100%),
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(0, 245, 255, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(255, 46, 230, 0.08) 0%, transparent 45%),
+    linear-gradient(rgba(0, 245, 255, 0.03) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(185, 103, 255, 0.04) 1rpx, transparent 1rpx);
+  background-size:
+    auto,
+    auto,
+    auto,
+    48rpx 48rpx,
+    48rpx 48rpx;
+  background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+}
+
+@mixin neon-text-cyan {
+  color: #d4ffff;
+  text-shadow:
+    0 0 6rpx $cyber-cyan,
+    0 0 14rpx rgba(0, 245, 255, 0.85),
+    0 0 28rpx rgba(0, 200, 255, 0.45);
+}
+
+@mixin neon-text-magenta {
+  color: #ffc8ff;
+  text-shadow:
+    0 0 6rpx $cyber-magenta,
+    0 0 14rpx rgba(255, 46, 230, 0.75),
+    0 0 24rpx rgba(180, 0, 255, 0.35);
+}
+
+@mixin neon-text-soft {
+  color: $cyber-text-muted;
+  text-shadow: 0 0 8rpx rgba(122, 143, 178, 0.5);
+}
+
+@mixin glow-border-cyan {
+  border: 1rpx solid rgba(0, 245, 255, 0.55);
+  box-shadow:
+    0 0 12rpx rgba(0, 245, 255, 0.35),
+    0 0 28rpx rgba(0, 245, 255, 0.12),
+    inset 0 0 24rpx rgba(0, 245, 255, 0.06);
+}
+
+@mixin glow-border-magenta {
+  border: 1rpx solid rgba(255, 46, 230, 0.5);
+  box-shadow:
+    0 0 14rpx rgba(255, 46, 230, 0.3),
+    inset 0 0 20rpx rgba(255, 46, 230, 0.05);
+}
+
+@mixin glow-border-purple {
+  border: 1rpx solid rgba(185, 103, 255, 0.45);
+  box-shadow:
+    0 0 12rpx rgba(185, 103, 255, 0.28),
+    inset 0 0 18rpx rgba(185, 103, 255, 0.06);
+}

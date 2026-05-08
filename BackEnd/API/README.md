@@ -16,7 +16,7 @@
 
 ## 统一响应结构
 
-除 `GET /api/aigc/chat` 和 `GET /api/aigc/stream` 外，HTTP 接口通常返回统一结构：
+除 `GET /api/aigc/chat`（纯文本）、`GET /api/aigc/stream` 外，HTTP 接口通常返回统一结构：
 
 ```json
 {
@@ -45,6 +45,7 @@
 | 方法 | 路径 | 模块 | 说明 |
 | --- | --- | --- | --- |
 | GET | `/api/aigc/chat` | AIGC | 普通 AI 问答，直接返回纯文本 |
+| POST | `/api/aigc/chat` | AIGC | 普通 AI 问答（JSON），返回统一 Result，`data` 为回答字符串（**小程序推荐**） |
 | GET | `/api/aigc/stream` | AIGC | SSE 流式 AI 问答，内部拼接 RAG 上下文 |
 | POST | `/api/aigc/multimodal` | AIGC | 图片理解问答 |
 | POST | `/api/aigc/image` | AIGC | 生成图片，可写入聊天室并广播 |
@@ -90,6 +91,33 @@ curl "http://localhost:8081/api/aigc/chat?message=介绍一下福州寿山石雕
 
 ```text
 寿山石雕是福州代表性传统工艺之一，以寿山石为材料，常见题材包括人物、山水、花鸟和印章等。
+```
+
+### POST `/api/aigc/chat`
+
+与 GET 能力相同，但使用 JSON 请求体与统一 `Result` 响应，便于微信小程序等客户端解析；长问题不受 URL 长度限制。
+
+请求体：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `message` | string | 是 | 用户输入 |
+
+```bash
+curl -X POST "http://localhost:8081/api/aigc/chat" \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"介绍一下福州寿山石雕\"}"
+```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": "寿山石雕是福州代表性传统工艺之一……",
+  "timestamp": "2026-05-03T10:00:00"
+}
 ```
 
 ### GET `/api/aigc/stream`

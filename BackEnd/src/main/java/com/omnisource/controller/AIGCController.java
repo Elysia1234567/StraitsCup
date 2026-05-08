@@ -40,8 +40,27 @@ public class AIGCController {
     @Value("${aliyun.oss.public-base-url:https://java-ai-fzu.oss-cn-beijing.aliyuncs.com}")
     private String ossPublicBaseUrl;
 
+    /**
+     * 普通问答（纯文本响应，兼容浏览器与 curl）。
+     */
     @GetMapping("/chat")
     public String chat(@RequestParam(value = "message", defaultValue = "你好") String message) {
+        return runSimpleChat(message);
+    }
+
+    /**
+     * 普通问答（JSON + 统一 {@link Result}，便于小程序 / 移动端解析；支持较长正文，避免 GET 超长 URL）。
+     */
+    @PostMapping("/chat")
+    public Result<String> chatPost(@RequestBody(required = false) Map<String, String> body) {
+        String message = body == null ? null : body.get("message");
+        if (!StringUtils.hasText(message)) {
+            return Result.badRequest("message 不能为空");
+        }
+        return Result.success(runSimpleChat(message.trim()));
+    }
+
+    private String runSimpleChat(String message) {
         return chatClient.prompt()
                 .user(message)
                 .call()

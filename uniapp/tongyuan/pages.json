@@ -1,0 +1,81 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "对话列表",
+        "navigationBarBackgroundColor": "#0a0a14",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/chat/chat",
+      "style": {
+        "navigationBarTitleText": "NEURAL CHAT",
+        "navigationBarBackgroundColor": "#0a0a14",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/agent/agent",
+      "style": {
+        "navigationBarTitleText": "智能体矩阵",
+        "navigationBarBackgroundColor": "#0a0a14",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/gallery/gallery",
+      "style": {
+        "navigationBarTitleText": "非遗图鉴",
+        "navigationBarBackgroundColor": "#0a0a14",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#5c6b8a",
+    "selectedColor": "#00f5ff",
+    "backgroundColor": "#0a0a14",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/home.png",
+        "selectedIconPath": "static/home-active.png"
+      },
+      {
+        "pagePath": "pages/chat/chat",
+        "text": "对话",
+        "iconPath": "static/chat.png",
+        "selectedIconPath": "static/chat-active.png"
+      },
+      {
+        "pagePath": "pages/agent/agent",
+        "text": "智能体",
+        "iconPath": "static/agent.png",
+        "selectedIconPath": "static/agent-active.png"
+      },
+      {
+        "pagePath": "pages/gallery/gallery",
+        "text": "图鉴",
+        "iconPath": "static/gallery.png",
+        "selectedIconPath": "static/gallery-active.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarBackgroundColor": "#0a0a14",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "CYBER",
+    "backgroundColor": "#050508"
+  },
+  "sitemapLocation": "sitemap.json"
+}

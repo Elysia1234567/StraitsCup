@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import SiteHeader from '../components/SiteHeader.vue';
 import ClientOnly from '../components/ClientOnly.vue';
 import AgentBackground from '../components/ui/AgentBackground.vue';
 import Sidebar from '../components/agent/Sidebar.vue';
@@ -334,8 +333,6 @@ watch(roomChatAgents, (agents) => {
         :ease="55"
       />
     </ClientOnly>
-
-    <SiteHeader />
 
     <section class="relative z-10 flex h-screen pt-16 text-white">
       <Sidebar

@@ -1,0 +1,20 @@
+{
+  "name": "tongyuan",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "gen-tab-icons": "node scripts/gen-tab-icons.js",
+    "sync-gallery": "node scripts/sync-home-gallery.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "仿豆包微信小程序（UniApp，见仓库根目录 小程序要求.md）",
+  "dependencies": {
+    "wot-design-uni": "^1.14.0"
+  },
+  "devDependencies": {
+    "sass": "^1.99.0"
+  }
+}

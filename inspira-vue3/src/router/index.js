@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import DefaultLayout from '../layouts/DefaultLayout.vue';
 import HomePage from '../pages/HomePage.vue';
 import InfiniteGridPage from '../pages/InfiniteGridPage.vue';
 import AgentPage from '../pages/AgentPage.vue';
@@ -37,23 +38,34 @@ function applyEdgeVisibilityHistoryWorkaround() {
 
 applyEdgeVisibilityHistoryWorkaround();
 
+/**
+ * 路由与布局
+ * - 默认布局：顶栏 SiteHeader（Home / Agent / Models）+ 子页面
+ * - /data：全屏 3D 展示，独立顶栏（与 InfiniteGrid 的「卡片跳转」一致，不在主导航中）
+ */
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomePage,
-    },
-    {
-      path: '/infinite-grid',
-      name: 'infinite-grid',
-      component: InfiniteGridPage,
-    },
-    {
-      path: '/agent',
-      name: 'agent',
-      component: AgentPage,
+      component: DefaultLayout,
+      children: [
+        {
+          path: '',
+          name: 'home',
+          component: HomePage,
+        },
+        {
+          path: 'agent',
+          name: 'agent',
+          component: AgentPage,
+        },
+        {
+          path: 'infinite-grid',
+          name: 'infinite-grid',
+          component: InfiniteGridPage,
+        },
+      ],
     },
     {
       path: '/data',

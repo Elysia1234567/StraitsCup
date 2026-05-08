@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import FlickeringGrid from '../components/FlickeringGrid.vue';
-import SiteHeader from '../components/SiteHeader.vue';
 import ClientOnly from '../components/ClientOnly.vue';
 import BlurReveal from '../components/ui/BlurReveal.vue';
 import ProgressiveBlur from '../components/ui/ProgressiveBlur.vue';
@@ -74,8 +73,6 @@ function onGalleryCardPick(payload: GalleryCardPickPayload) {
       :max-opacity="0.7"
       :flicker-chance="0.2"
     />
-
-    <SiteHeader />
 
     <ClientOnly>
       <div

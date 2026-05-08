@@ -1,0 +1,27 @@
+/* Wot Design Uni 赛博主题：与 cyber.scss 主色对齐，供 page / 根节点继承 */
+
+page {
+  --wot-color-theme: #00f5ff;
+  --wot-color-purple: #b967ff;
+  --wot-color-danger: #ff2ee6;
+  --wot-color-success: #34d19d;
+
+  --wot-dark-background: #0a0a14;
+  --wot-dark-background2: rgba(12, 18, 40, 0.92);
+  --wot-dark-background3: #121828;
+  --wot-dark-background4: rgba(0, 245, 255, 0.12);
+  --wot-dark-border-color: rgba(0, 245, 255, 0.28);
+  --wot-dark-color: #e8f4ff;
+  --wot-dark-color3: rgba(122, 143, 178, 0.85);
+
+  --wot-color-icon: rgba(0, 245, 255, 0.75);
+  --wot-color-icon-active: #00f5ff;
+  --wot-color-icon-disabled: rgba(92, 107, 138, 0.5);
+
+  --wot-color-title: #e8f4ff;
+  --wot-color-content: #c8dcff;
+  --wot-color-secondary: #7a8fb2;
+  --wot-color-border: rgba(0, 245, 255, 0.22);
+  --wot-color-border-light: rgba(185, 103, 255, 0.15);
+  --wot-color-bg: rgba(5, 8, 20, 0.96);
+}
