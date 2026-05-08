@@ -24,16 +24,6 @@
             <MagnifyingGlassIcon class="h-3.5 w-3.5 text-white/80" />
             <span class="text-xs text-white/80">联网搜索</span>
           </button>
-          <button
-            class="flex shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 transition hover:bg-white/10"
-            :class="{ 'bg-white/15 ring-1 ring-white/20': imageMode }"
-            type="button"
-            :disabled="disabled"
-            @click="imageMode = !imageMode"
-          >
-            <PhotoIcon class="h-3.5 w-3.5 text-white/80" />
-            <span class="text-xs text-white/80">AI生图</span>
-          </button>
         </div>
 
         <div class="flex shrink-0 items-center gap-1 pl-1">
@@ -53,11 +43,10 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted } from 'vue';
-import { MagnifyingGlassIcon, PhotoIcon, ArrowUpIcon } from '@heroicons/vue/24/outline';
+import { MagnifyingGlassIcon, ArrowUpIcon } from '@heroicons/vue/24/outline';
 
 const inputText = ref('');
 const searchEnabled = ref(false);
-const imageMode = ref(false);
 const textareaRef = ref(null);
 
 const MAX_TEXT_LINES = 4;
@@ -98,10 +87,8 @@ const handleSend = () => {
   emit('send', {
     text: inputText.value.trim(),
     searchEnabled: searchEnabled.value,
-    imageMode: imageMode.value,
   });
   inputText.value = '';
-  imageMode.value = false;
   nextTick(() => adjustTextareaHeight());
 };
 

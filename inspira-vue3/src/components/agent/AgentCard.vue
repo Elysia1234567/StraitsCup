@@ -26,11 +26,6 @@
           >已选</span>
         </div>
         <p class="mb-2 line-clamp-2 text-sm text-white/80">{{ agent.description }}</p>
-        <p class="text-xs text-white/60">
-          <span v-if="agent.agentCode" class="font-mono text-white/50">{{ agent.agentCode }}</span>
-          <span v-if="agent.agentCode && agent.usageCount"> · </span>
-          <span v-if="agent.usageCount">{{ agent.usageCount }}+次使用</span>
-        </p>
       </div>
     </div>
   </div>

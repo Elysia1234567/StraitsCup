@@ -215,6 +215,23 @@ export function useMultiAgentChat() {
     }
   }
 
+  async function refreshRoomChatAgents() {
+    if (!currentRoomId.value) return;
+    await loadRoomChatAgents(currentRoomId.value);
+  }
+
+  async function addRoomAgentToCurrentRoom(agentCode) {
+    if (!currentRoomId.value) return;
+    await chatApi.addRoomAgent(currentRoomId.value, agentCode);
+    await refreshRoomChatAgents();
+  }
+
+  async function removeRoomAgentFromCurrentRoom(memberId) {
+    if (!currentRoomId.value) return;
+    await chatApi.removeRoomAgent(currentRoomId.value, memberId);
+    await refreshRoomChatAgents();
+  }
+
   async function openRoom(roomId) {
     if (!roomId) return;
     loadingMessages.value = true;
@@ -301,6 +318,8 @@ export function useMultiAgentChat() {
     openRoom,
     createNewRoom,
     deleteChatRoom,
+    addRoomAgentToCurrentRoom,
+    removeRoomAgentFromCurrentRoom,
     sendUserMessage,
     disconnectWs,
   };

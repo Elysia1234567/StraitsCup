@@ -35,16 +35,9 @@ const navItemClass = (path) =>
       </div>
 
       <div class="ml-auto flex items-center gap-2.5">
-        <button
-          class="inline-flex h-9 items-center gap-2 rounded-md border border-white/15 bg-white/[0.03] px-3 text-xs text-white/70"
-          type="button"
-        >
-          <span class="text-white/50">Search...</span>
-          <kbd class="rounded border border-white/20 px-1.5 py-0.5 text-[10px] text-white/60">K</kbd>
-        </button>
         <a
           class="inline-flex h-9 items-center rounded-md border border-white/15 bg-white/[0.03] px-3 text-xs text-white/80 transition hover:bg-white/[0.08]"
-          href="https://github.com/unovue/inspira-ui"
+          href="https://github.com/Elysia1234567/StraitsCup"
           target="_blank"
           rel="noreferrer"
         >

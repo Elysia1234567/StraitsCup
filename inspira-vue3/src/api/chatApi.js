@@ -31,6 +31,17 @@ export function fetchRoomAgents(roomId) {
   return apiFetch(`/api/chat-rooms/${roomId}/agents`);
 }
 
+export function addRoomAgent(roomId, agentCode) {
+  return apiFetch(`/api/chat-rooms/${roomId}/agents`, {
+    method: 'POST',
+    body: JSON.stringify({ agentCode }),
+  });
+}
+
+export function removeRoomAgent(roomId, memberId) {
+  return apiFetch(`/api/chat-rooms/${roomId}/agents/${memberId}`, { method: 'DELETE' });
+}
+
 export function deleteRoom(roomId) {
   return apiFetch(`/api/chat-rooms/${roomId}`, { method: 'DELETE' });
 }
