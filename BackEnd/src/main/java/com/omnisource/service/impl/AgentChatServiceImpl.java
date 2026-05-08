@@ -136,7 +136,7 @@ public class AgentChatServiceImpl implements AgentChatService {
             ChatMessage agentMsg = saveAgentMessage(roomId, agent, streamId, finalText,
                     searchResult != null || !retrievals.isEmpty());
             broadcastAgentEnd(roomId, agent, streamId, agentMsg.getId(), finalText);
-            if (isSelfIntroduction(userMessage)) {
+            if (shouldSendSourceImage(userMessage)) {
                 broadcastSourceImage(roomId, agent);
             }
             int count = roomDiscussionCounters.get(roomId).incrementAndGet();
@@ -239,13 +239,18 @@ public class AgentChatServiceImpl implements AgentChatService {
                 || c.contains("\u6bcf\u4e2a\u4eba") || c.contains("\u4e00\u8d77\u56de\u7b54");
     }
 
-    private boolean isSelfIntroduction(String content) {
+    private boolean shouldSendSourceImage(String content) {
         if (content == null) {
             return false;
         }
         String c = content.toLowerCase();
         return c.contains("介绍自己") || c.contains("自我介绍") || c.contains("你是谁")
-                || c.contains("介绍一下") || c.contains("introduce yourself");
+                || c.contains("介绍一下") || c.contains("introduce yourself")
+                || c.contains("原型") || c.contains("本体") || c.contains("原始形态")
+                || c.contains("原始参考图") || c.contains("参考图") || c.contains("长什么样")
+                || c.contains("什么样子") || c.contains("真实样子") || c.contains("真实形态")
+                || c.contains("source image") || c.contains("reference image")
+                || c.contains("prototype");
     }
 
     @Override
@@ -280,8 +285,8 @@ public class AgentChatServiceImpl implements AgentChatService {
         String systemPrompt = agent.buildSystemPrompt("\u975e\u9057\u6587\u5316");
         systemPrompt += "\n\n[Chat rule]\n"
                 + "Reply naturally in about 1-300 Chinese characters. Short replies are allowed.\n"
-                + "When the user asks you to introduce yourself, mention that your original reference image is available at: "
-                + buildSourceImageUrl(agent) + "\n"
+                + "When the user asks about your prototype, original form, real appearance, or reference image, "
+                + "describe your source object in words. Do not output the raw image URL; the system will send the image separately.\n"
                 + "Do not claim you created an image unless an image message is actually sent.";
         if (retrievals != null && !retrievals.isEmpty()) {
             systemPrompt += "\n\n[RAG references]\n" + buildRagReferenceText(retrievals)
@@ -517,7 +522,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         msg.setSenderId(agent.getAgentCode());
         msg.setSenderName(agent.getName());
         msg.setSenderAvatar(agent.getAvatar());
-        msg.setContent("这是我的原始参考图。");
+        msg.setContent(buildSourceImageDescription(agent));
         msg.setImageUrl(sourceImageUrl);
         msg.setIsStream(0);
         msg.setSearchEnabled(0);
@@ -537,5 +542,42 @@ public class AgentChatServiceImpl implements AgentChatService {
                 .timestamp(msg.getCreateTime())
                 .build();
         sessionManager.broadcastToRoom(roomId, wsMsg);
+    }
+
+    private String buildSourceImageDescription(Agent agent) {
+        String filename = sourceImageFilename(agent.getAgentCode());
+        if (filename == null) {
+            return "这是我的原始参考图，我的形象会从它的材质、颜色和气质里生长出来。";
+        }
+        return switch (agent.getAgentCode()) {
+            case "fz_shoushan_stone" -> "这是我的原型「寿山石雕」：温润石色、细密纹理和圆雕起伏，是我沉静含蓄气质的来源。";
+            case "fz_cork_scene" -> "这是我的原型「福州软木画」：亭台、树影和层层镂刻构成微缩山水，所以我说话也像在慢慢展开景深。";
+            case "fz_lacquerware" -> "这是我的原型「脱胎漆器」：黑漆、朱红和金色光泽叠在器面上，给了我明亮又克制的性格。";
+            case "xm_bead_embroidery" -> "这是我的原型「厦门珠绣」：细小珠粒排成明亮纹样，像海面碎光，也像我一句句整理重点的方式。";
+            case "xm_lacquer_thread" -> "这是我的原型「漆线雕」：金线盘绕、纹路有序，我的华丽感和秩序感都从这里来。";
+            case "xm_wangchuan" -> "这是我的原型「送王船」：船帆、火光和海潮构成我的底色，所以我常把告别说成启航。";
+            case "qz_dehua_porcelain" -> "这是我的原型「德化瓷」：洁白瓷色和柔和线条，让我的表达清冷、安静，也带一点不折的骨。";
+            case "qz_paper_lantern" -> "这是我的原型「刻纸花灯」：彩纸、灯火和节日纹样给了我明艳、亲近的说话方式。";
+            case "qz_string_puppet" -> "这是我的原型「提线木偶」：木身、彩衣和细线牵动的舞台节奏，形成了我灵巧又懂分寸的性格。";
+            case "zz_glove_puppet" -> "这是我的原型「布袋木偶戏」：袖中舞台、彩衣和小小面孔，让我机灵、会接话，也有自己的主见。";
+            case "zz_woodblock_print" -> "这是我的原型「木版年画」：鲜明轮廓、热烈色彩和年节气息，是我爽快直白的来源。";
+            case "zz_pien_tze_huang" -> "这是我的原型「片仔癀」：橙白包装和药香记忆让我保持谨慎、清楚，也懂得守住边界。";
+            case "pt_puxian_opera" -> "这是我的原型「莆仙戏」：水袖、唱腔和舞台身段，让我的回应带着婉转的弧度。";
+            case "pt_silver_ornament" -> "这是我的原型「莆田银饰」：银光、錾刻和礼饰节拍，让我说话清亮、精巧、讲分寸。";
+            case "pt_longan_woodcarving" -> "这是我的原型「龙眼木雕」：木纹、刀痕和温厚造像，是我安静慈和气质的根。";
+            case "np_jian_ware" -> "这是我的原型「建阳建盏（黑釉瓷）」：黑釉深处的斑纹像夜色藏星，让我沉静、惜字，也带回甘。";
+            case "np_wuyi_tea" -> "这是我的原型「武夷岩茶」：岩骨、茶汤和焙火香气，让我的回答先醒神，再慢慢回甘。";
+            case "np_nuo_mask" -> "这是我的原型「邵武傩面具」：夸张面纹和彩漆仪式感，让我庄重、守界，也能安定混乱。";
+            case "sm_hakka_bamboo" -> "这是我的原型「客家竹编」：竹篾经纬交错，给了我爽直、能干、耐用的表达骨架。";
+            case "sm_danankeng_pottery" -> "这是我的原型「将乐大南坑陶瓷」：土火、釉色和器形让我朴厚慢热，说话更重火候。";
+            case "sm_mingxi_microcarving" -> "这是我的原型「明溪微雕」：细密刀工把大山水收进小处，所以我寡言、专注，只挑关键一笔。";
+            case "ly_hakka_rice_wine" -> "这是我的原型「客家米酒」：糯米、陶壶和谷物甜香，让我爽朗好客，也擅长把话题煨暖。";
+            case "ly_hakka_embroidery" -> "这是我的原型「龙岩客家刺绣」：黑布、彩线和针脚纹样，让我细密坚定，柔里有锋。";
+            case "ly_farmer_painting" -> "这是我的原型「农民画」：饱满色彩、田埂和节庆生活，让我开朗直接，回答也更热闹鲜活。";
+            case "nd_zherong_papercut" -> "这是我的原型「柘荣剪纸」：红纸、刀口和留白，让我利落聪明，知道该剪去多余。";
+            case "nd_she_costume" -> "这是我的原型「畲族服饰」：银饰、彩带和山路歌声，让我端丽自尊，也记得族群来路。";
+            case "nd_line_lion" -> "这是我的原型「霍童线狮」：丝线牵引、金色鬃毛和舞台步点，让我机敏跳脱又讲配合。";
+            default -> "这是我的原型「" + filename + "」，我的形象会从它的材质、颜色和气质里生长出来。";
+        };
     }
 }

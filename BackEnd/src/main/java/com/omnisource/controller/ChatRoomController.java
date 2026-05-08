@@ -38,8 +38,12 @@ public class ChatRoomController {
         @SuppressWarnings("unchecked")
         List<String> agentCodes = (List<String>) request.get("agentCodes");
 
-        ChatRoom room = chatRoomService.createRoom(userId, name, themeId, agentCodes);
-        return Result.success(room);
+        try {
+            ChatRoom room = chatRoomService.createRoom(userId, name, themeId, agentCodes);
+            return Result.success(room);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.badRequest(e.getMessage());
+        }
     }
 
     @GetMapping("/{roomId}")
@@ -50,6 +54,18 @@ public class ChatRoomController {
     @GetMapping("/{roomId}/agents")
     public Result<List<ChatRoomMember>> getRoomAgents(@PathVariable Long roomId) {
         return Result.success(chatRoomService.getRoomAgentMembers(roomId));
+    }
+
+    @PostMapping("/{roomId}/agents")
+    public Result<ChatRoomMember> addRoomAgent(
+            @PathVariable Long roomId,
+            @RequestBody Map<String, Object> request) {
+        String agentCode = (String) request.get("agentCode");
+        try {
+            return Result.success(chatRoomService.addRoomAgent(roomId, agentCode));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return Result.badRequest(e.getMessage());
+        }
     }
 
     @PutMapping("/{roomId}/agents/{memberId}")

@@ -1,6 +1,5 @@
 package com.omnisource.service.impl;
 
-import com.omnisource.Agents.AgentDefaults;
 import com.omnisource.entity.Agent;
 import com.omnisource.entity.ChatRoom;
 import com.omnisource.entity.ChatRoomMember;
@@ -11,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -22,6 +20,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ChatRoomServiceImpl implements ChatRoomService {
+
+    private static final int MIN_AGENT_COUNT = 1;
+    private static final int MAX_AGENT_COUNT = 6;
 
     private final ChatRoomMapper chatRoomMapper;
     private final AgentService agentService;
@@ -38,9 +39,10 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Override
     @Transactional
     public ChatRoom createRoom(Long userId, String name, Long themeId, List<String> agentCodes) {
-        List<String> selectedAgentCodes = CollectionUtils.isEmpty(agentCodes)
-                ? AgentDefaults.DEFAULT_AGENT_CODES
+        List<String> selectedAgentCodes = agentCodes == null
+                ? List.of()
                 : new ArrayList<>(new LinkedHashSet<>(agentCodes));
+        validateAgentCount(selectedAgentCodes.size());
 
         ChatRoom room = new ChatRoom();
         room.setRoomCode(UUID.randomUUID().toString().replace("-", "").substring(0, 16));
@@ -64,17 +66,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         for (String code : selectedAgentCodes) {
             Agent agent = agentService.getAgentByCode(code);
-            if (agent != null) {
-                ChatRoomMember agentMember = new ChatRoomMember();
-                agentMember.setRoomId(room.getId());
-                agentMember.setMemberType("AGENT");
-                agentMember.setAgentId(agent.getId());
-                agentMember.setDisplayName(agent.getName());
-                agentMember.setAvatar(agent.getAvatar());
-                agentMember.setRoleInRoom("MEMBER");
-                chatRoomMapper.insertMember(agentMember);
-                room.setMemberCount(room.getMemberCount() + 1);
+            if (agent == null) {
+                throw new IllegalArgumentException("Agent 不存在: " + code);
             }
+            ChatRoomMember agentMember = buildAgentMember(room.getId(), agent);
+            chatRoomMapper.insertMember(agentMember);
+            room.setMemberCount(room.getMemberCount() + 1);
         }
 
         chatRoomMapper.updateMemberCount(room.getId(), room.getMemberCount());
@@ -145,6 +142,35 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional
+    public ChatRoomMember addRoomAgent(Long roomId, String agentCode) {
+        ChatRoom room = chatRoomMapper.selectById(roomId);
+        if (room == null) {
+            throw new IllegalArgumentException("聊天室不存在");
+        }
+
+        int agentCount = chatRoomMapper.countAgentMembersByRoomId(roomId);
+        if (agentCount >= MAX_AGENT_COUNT) {
+            throw new IllegalStateException("聊天室最多选择 6 个 Agent");
+        }
+
+        Agent agent = agentService.getAgentByCode(agentCode);
+        if (agent == null) {
+            throw new IllegalArgumentException("Agent 不存在");
+        }
+        boolean alreadyInRoom = chatRoomMapper.selectAgentMembersByRoomId(roomId).stream()
+                .anyMatch(existing -> agent.getId().equals(existing.getAgentId()));
+        if (alreadyInRoom) {
+            throw new IllegalArgumentException("该 Agent 已在聊天室中");
+        }
+
+        ChatRoomMember member = buildAgentMember(roomId, agent);
+        chatRoomMapper.insertMember(member);
+        chatRoomMapper.updateMemberCount(roomId, agentCount + 2);
+        return chatRoomMapper.selectMemberById(member.getId());
+    }
+
+    @Override
+    @Transactional
     public ChatRoomMember replaceRoomAgent(Long roomId, Long memberId, String agentCode) {
         ChatRoomMember member = chatRoomMapper.selectMemberById(memberId);
         if (member == null || !roomId.equals(member.getRoomId()) || !"AGENT".equals(member.getMemberType())) {
@@ -177,11 +203,28 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
 
         int agentCount = chatRoomMapper.countAgentMembersByRoomId(roomId);
-        if (agentCount <= 1) {
+        if (agentCount <= MIN_AGENT_COUNT) {
             throw new IllegalStateException("聊天室至少保留一个 Agent");
         }
 
         chatRoomMapper.deleteAgentMember(roomId, memberId);
         chatRoomMapper.updateMemberCount(roomId, agentCount);
+    }
+
+    private ChatRoomMember buildAgentMember(Long roomId, Agent agent) {
+        ChatRoomMember agentMember = new ChatRoomMember();
+        agentMember.setRoomId(roomId);
+        agentMember.setMemberType("AGENT");
+        agentMember.setAgentId(agent.getId());
+        agentMember.setDisplayName(agent.getName());
+        agentMember.setAvatar(agent.getAvatar());
+        agentMember.setRoleInRoom("MEMBER");
+        return agentMember;
+    }
+
+    private void validateAgentCount(int count) {
+        if (count < MIN_AGENT_COUNT || count > MAX_AGENT_COUNT) {
+            throw new IllegalArgumentException("聊天室需要选择 1 到 6 个 Agent");
+        }
     }
 }

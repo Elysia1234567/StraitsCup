@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-label="同源系统架构总览">
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#eaf7f3"/>
+    </linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="back" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="ai" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#475569"/>
+    </marker>
+    <filter id="cardShadow" x="-12%" y="-20%" width="124%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title{font-family:Microsoft YaHei,PingFang SC,Arial,sans-serif;font-weight:800;fill:#0f172a}
+      .h{font-family:Microsoft YaHei,PingFang SC,Arial,sans-serif;font-weight:700;fill:white}
+      .t{font-family:Microsoft YaHei,PingFang SC,Arial,sans-serif;fill:#334155}
+      .w{font-family:Microsoft YaHei,PingFang SC,Arial,sans-serif;fill:white}
+      .small{font-size:15px}.mid{font-size:18px}.big{font-size:30px}
+    </style>
+  </defs>
+  <rect width="1200" height="760" fill="url(#page)"/>
+  <text x="60" y="64" class="title big">《同源》系统架构总览</text>
+  <text x="60" y="96" class="t small">前端沉浸体验、后端智能编排、知识库与生成式能力共同构成非遗数字生命平台</text>
+
+  <g filter="url(#cardShadow)">
+    <rect x="60" y="140" width="260" height="500" rx="18" fill="#ffffff"/>
+    <rect x="60" y="140" width="260" height="58" rx="18" fill="url(#front)"/>
+    <text x="88" y="176" class="h mid">前端体验层</text>
+    <rect x="90" y="230" width="200" height="58" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="116" y="264" class="t small">Vue 3 / Vite / Tailwind</text>
+    <rect x="90" y="312" width="200" height="58" rx="12" fill="#ecfeff" stroke="#99f6e4"/>
+    <text x="124" y="346" class="t small">福建地图 + 环形画廊</text>
+    <rect x="90" y="394" width="200" height="58" rx="12" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="130" y="428" class="t small">多 Agent 聊天室</text>
+    <rect x="90" y="476" width="200" height="58" rx="12" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="126" y="510" class="t small">Three/OGL 动效展示</text>
+    <rect x="90" y="558" width="200" height="50" rx="12" fill="#fff7ed" stroke="#fed7aa"/>
+    <text x="130" y="589" class="t small">AI 生图工作台</text>
+  </g>
+
+  <g filter="url(#cardShadow)">
+    <rect x="470" y="126" width="280" height="528" rx="18" fill="#ffffff"/>
+    <rect x="470" y="126" width="280" height="58" rx="18" fill="url(#back)"/>
+    <text x="498" y="162" class="h mid">后端业务与编排层</text>
+    <rect x="500" y="214" width="220" height="54" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+    <text x="542" y="247" class="t small">Controller REST API</text>
+    <rect x="500" y="288" width="220" height="54" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+    <text x="538" y="321" class="t small">Service 接口与实现</text>
+    <rect x="500" y="362" width="220" height="54" rx="12" fill="#fefce8" stroke="#fde68a"/>
+    <text x="544" y="395" class="t small">AgentOrchestrator</text>
+    <rect x="500" y="436" width="220" height="54" rx="12" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="536" y="469" class="t small">AgentPromptBuilder</text>
+    <rect x="500" y="510" width="220" height="54" rx="12" fill="#fff1f2" stroke="#fecdd3"/>
+    <text x="526" y="543" class="t small">WebSocket 流式广播</text>
+    <rect x="500" y="584" width="220" height="44" rx="12" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text x="546" y="612" class="t small">异常与统一响应</text>
+  </g>
+
+  <g filter="url(#cardShadow)">
+    <rect x="890" y="140" width="250" height="500" rx="18" fill="#ffffff"/>
+    <rect x="890" y="140" width="250" height="58" rx="18" fill="url(#ai)"/>
+    <text x="918" y="176" class="h mid">智能与数据支撑层</text>
+    <rect x="920" y="230" width="190" height="58" rx="12" fill="#faf5ff" stroke="#e9d5ff"/>
+    <text x="954" y="264" class="t small">Spring AI / 千问</text>
+    <rect x="920" y="312" width="190" height="58" rx="12" fill="#f0fdfa" stroke="#99f6e4"/>
+    <text x="964" y="346" class="t small">Milvus 向量库</text>
+    <rect x="920" y="394" width="190" height="58" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+    <text x="972" y="428" class="t small">Redis 状态缓存</text>
+    <rect x="920" y="476" width="190" height="58" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="972" y="510" class="t small">MySQL 持久化</text>
+    <rect x="920" y="558" width="190" height="50" rx="12" fill="#fff7ed" stroke="#fed7aa"/>
+    <text x="956" y="589" class="t small">OSS 图像归档</text>
+  </g>
+
+  <path d="M320 302 C382 302 405 252 470 252" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <path d="M320 424 C382 424 405 514 470 514" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <path d="M750 316 C808 316 824 260 890 260" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <path d="M750 390 C808 390 824 342 890 342" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <path d="M750 536 C808 536 824 506 890 506" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <path d="M890 588 C815 674 392 674 290 588" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="8 8" marker-end="url(#arrow)"/>
+  <text x="492" y="710" class="t small">关键闭环：用户输入 → Agent 选择 → RAG/搜索增强 → 大模型生成 → WebSocket 分片 → 前端实时呈现 → 图像/消息沉淀</text>
+</svg>

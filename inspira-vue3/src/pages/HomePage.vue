@@ -134,7 +134,7 @@ function onGalleryCardPick(payload: GalleryCardPickPayload) {
         >
           <h2 class="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">同源 👋</h2>
           <span class="text-xl tracking-tighter text-pretty sm:text-3xl xl:text-4xl/none">
-            Tong Yuan
+            Omni Source
           </span>
         </BlurReveal>
         <div class="pointer-events-none mt-10 space-y-2 px-8 sm:mt-12 sm:space-y-2.5">

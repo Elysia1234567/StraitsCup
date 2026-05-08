@@ -12,6 +12,7 @@ public interface ChatRoomService {
     void dissolveRoom(Long roomId, Long userId);
     List<ChatRoomMember> getRoomMembers(Long roomId);
     List<ChatRoomMember> getRoomAgentMembers(Long roomId);
+    ChatRoomMember addRoomAgent(Long roomId, String agentCode);
     ChatRoomMember replaceRoomAgent(Long roomId, Long memberId, String agentCode);
     void removeRoomAgent(Long roomId, Long memberId);
 }

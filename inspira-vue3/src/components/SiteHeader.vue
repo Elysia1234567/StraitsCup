@@ -9,20 +9,16 @@ const navItemClass = (path) =>
 
 <template>
   <header class="absolute inset-x-0 top-0 z-30 h-16 border-b border-white/[0.08] bg-transparent backdrop-blur-md">
-    <nav class="flex h-full w-full items-center px-[10px]">
+    <nav class="grid h-full w-full grid-cols-[1fr_auto_1fr] items-center px-6">
       <RouterLink
-        class="inline-flex items-center gap-7 text-xl font-semibold text-white/95"
+        class="flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-white/15 transition hover:bg-white/[0.06]"
         to="/"
+        aria-label="Omni Source home"
       >
-        <img
-          class="h-[50px] w-[50px] rounded-full object-cover"
-          src="https://fastly.picsum.photos/id/596/200/200.jpg?hmac=TiMsstBNF6YKq9Gn7QGsihITEUcv_O8QuTXEVR3T6GA"
-          alt="brand avatar"
-        />
-        同源
+        <img class="h-8 w-8" src="/logo.svg" alt="Omni Source strait logo" />
       </RouterLink>
 
-      <div class="ml-[200px] flex items-center gap-[80px] text-sm">
+      <div class="flex items-center gap-12 text-sm sm:gap-16">
         <RouterLink :class="navItemClass('/')" to="/">
           Home
         </RouterLink>
@@ -34,7 +30,7 @@ const navItemClass = (path) =>
         </RouterLink>
       </div>
 
-      <div class="ml-auto flex items-center gap-2.5">
+      <div class="flex items-center justify-end gap-2.5">
         <a
           class="inline-flex h-9 items-center rounded-md border border-white/15 bg-white/[0.03] px-3 text-xs text-white/80 transition hover:bg-white/[0.08]"
           href="https://github.com/Elysia1234567/StraitsCup"
