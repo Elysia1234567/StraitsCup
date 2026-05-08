@@ -28,6 +28,9 @@ public class TavilySearchServiceImpl implements TavilySearchService {
 
     @Override
     public String searchAndFormat(String query) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return "[Tavily search is not configured: missing TAVILY_API_KEY]";
+        }
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

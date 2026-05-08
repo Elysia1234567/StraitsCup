@@ -11,6 +11,9 @@ export default defineConfig({
     },
   },
   server: {
+    headers: {
+      'Cache-Control': 'no-store',
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8081',
