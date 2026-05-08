@@ -44,6 +44,14 @@ const HOME_GALLERY_LOCAL_FILES = import.meta.glob(
   },
 ) as Record<string, string>;
 
+const DEV_ASSET_CACHE_BUSTER = import.meta.env.DEV ? `?v=${Date.now()}` : '';
+
+function toPublicHomeGalleryUrl(filePath: string): string {
+  const fileName = filePath.split('/').pop();
+  if (!fileName) return '';
+  return `/home-gallery/${encodeURIComponent(fileName)}${DEV_ASSET_CACHE_BUSTER}`;
+}
+
 function parseLocalImageMeta(filePath: string, imagePath: string): LocalImageMeta | null {
   const fileName = filePath.split('/').pop();
   if (!fileName) return null;
@@ -59,7 +67,7 @@ function parseLocalImageMeta(filePath: string, imagePath: string): LocalImageMet
 
 function buildLocalCityImageMap(): Map<string, LocalImageMeta[]> {
   const parsedList = Object.entries(HOME_GALLERY_LOCAL_FILES)
-    .map(([filePath, imagePath]) => parseLocalImageMeta(filePath, imagePath))
+    .map(([filePath]) => parseLocalImageMeta(filePath, toPublicHomeGalleryUrl(filePath)))
     .filter((x): x is LocalImageMeta => x !== null);
 
   const map = new Map<string, LocalImageMeta[]>();

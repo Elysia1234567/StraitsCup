@@ -80,6 +80,15 @@ tavily:
   api-key: ${TAVILY_API_KEY}
   max-results: ${TAVILY_MAX_RESULTS:3}
 
+# Realtime speech recognition
+voice:
+  dashscope:
+    api-key: ${DASHSCOPE_API_KEY:${QIANWEN_API_KEY:}}
+    model: ${DASHSCOPE_ASR_MODEL:fun-asr-realtime}
+    mandarin-model: ${DASHSCOPE_ASR_MANDARIN_MODEL:fun-asr-realtime-2025-09-15}
+    minnan-model: ${DASHSCOPE_ASR_MINNAN_MODEL:fun-asr-realtime-2025-11-07}
+    sample-rate: ${DASHSCOPE_ASR_SAMPLE_RATE:16000}
+
 # 聊天室配置
 chat:
   room:
