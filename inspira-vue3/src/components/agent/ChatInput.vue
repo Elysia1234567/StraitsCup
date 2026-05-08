@@ -83,6 +83,7 @@ const voiceRecording = ref(false);
 const voiceConnecting = ref(false);
 const voiceError = ref('');
 const voiceDialect = ref('mandarin');
+const voiceTranscript = ref('');
 
 const MAX_TEXT_LINES = 4;
 
@@ -134,6 +135,7 @@ function handleSend() {
     searchEnabled: searchEnabled.value,
   });
   inputText.value = '';
+  voiceTranscript.value = '';
   nextTick(() => adjustTextareaHeight());
 }
 
@@ -185,6 +187,7 @@ function stopVoiceInput() {
   voiceSource.value = null;
   voiceAudioContext.value = null;
   voiceStream.value = null;
+  voiceTranscript.value = '';
   voiceRecording.value = false;
   voiceConnecting.value = false;
 }
@@ -226,11 +229,32 @@ function handleVoiceMessage(raw) {
     if (payload.type !== 'transcript') return;
     const text = extractTranscript(payload.data?.text ?? payload.data?.result);
     if (!text) return;
-    inputText.value = text;
-    nextTick(() => adjustTextareaHeight());
+    appendVoiceTranscript(text, Boolean(payload.data?.sentenceEnd));
   } catch {
     // Ignore non-JSON messages.
   }
+}
+
+function appendVoiceTranscript(text, sentenceEnd) {
+  const nextText = String(text).trim();
+  if (!nextText) return;
+
+  const previousText = voiceTranscript.value;
+  let delta = nextText;
+
+  if (previousText && nextText.startsWith(previousText)) {
+    delta = nextText.slice(previousText.length).trimStart();
+  } else if (previousText && previousText.startsWith(nextText)) {
+    delta = '';
+  }
+
+  if (delta) {
+    const needsSpace = inputText.value && !/\s$/.test(inputText.value) && !/^[，。！？,.!?;:]/.test(delta);
+    inputText.value += `${needsSpace ? ' ' : ''}${delta}`;
+    nextTick(() => adjustTextareaHeight());
+  }
+
+  voiceTranscript.value = sentenceEnd ? '' : nextText;
 }
 
 function extractTranscript(result) {
