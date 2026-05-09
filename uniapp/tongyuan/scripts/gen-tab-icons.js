@@ -1,3 +1,15 @@
+/**
+ * 底部 tabBar 图标：默认使用 DCloud 官方示例 hello-uniapp 的 PNG（见 static/）。
+ * 仅当需要纯色占位图时执行：GEN_TAB_PLACEHOLDERS=1 node scripts/gen-tab-icons.js
+ */
+if (process.env.GEN_TAB_PLACEHOLDERS !== '1') {
+  console.log(
+    '跳过：当前 tab 图标为官方示例资源（pages.json → static/home*.png、static/tab-*.png）。',
+  )
+  console.log('若需生成纯色占位 PNG：GEN_TAB_PLACEHOLDERS=1 npm run gen-tab-icons')
+  process.exit(0)
+}
+
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -53,14 +65,18 @@ function png(w, h, r, g, b, outPath) {
 
 const base = path.join(__dirname, '..', 'static')
 if (!fs.existsSync(base)) fs.mkdirSync(base, { recursive: true })
-/* 未选中 #5c6b8a，选中 #00f5ff（与 tabBar 赛博主题一致） */
-png(81, 81, 92, 107, 138, path.join(base, 'home.png'))
-png(81, 81, 0, 245, 255, path.join(base, 'home-active.png'))
-png(81, 81, 92, 107, 138, path.join(base, 'chat.png'))
-png(81, 81, 0, 245, 255, path.join(base, 'chat-active.png'))
-png(81, 81, 92, 107, 138, path.join(base, 'agent.png'))
-png(81, 81, 0, 245, 255, path.join(base, 'agent-active.png'))
-/* 图鉴：未选中灰，选中青绿 */
-png(81, 81, 92, 107, 138, path.join(base, 'gallery.png'))
-png(81, 81, 0, 245, 255, path.join(base, 'gallery-active.png'))
-console.log('tab icons written to', base)
+const dimR = 124
+const dimG = 115
+const dimB = 149
+const actR = 196
+const actG = 181
+const actB = 253
+png(81, 81, dimR, dimG, dimB, path.join(base, 'home.png'))
+png(81, 81, actR, actG, actB, path.join(base, 'home-active.png'))
+png(81, 81, dimR, dimG, dimB, path.join(base, 'tab-chat.png'))
+png(81, 81, actR, actG, actB, path.join(base, 'tab-chat-active.png'))
+png(81, 81, dimR, dimG, dimB, path.join(base, 'tab-agent.png'))
+png(81, 81, actR, actG, actB, path.join(base, 'tab-agent-active.png'))
+png(81, 81, dimR, dimG, dimB, path.join(base, 'tab-gallery.png'))
+png(81, 81, actR, actG, actB, path.join(base, 'tab-gallery-active.png'))
+console.log('placeholder tab icons written to', base)

@@ -20,5 +20,11 @@ page {
   background-color: $cyber-bg-void;
   color: $cyber-text;
   min-height: 100%;
+  font-family:
+    system-ui,
+    -apple-system,
+    'PingFang SC',
+    'Helvetica Neue',
+    sans-serif;
 }
 </style>

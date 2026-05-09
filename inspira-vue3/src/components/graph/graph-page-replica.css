@@ -1,0 +1,121 @@
+/* ========== 赛博朋克图谱全局 ========== */
+.my-graph .relation-graph {
+  --cyber-cyan: rgba(34, 211, 238, 0.82);
+  --cyber-fuchsia: rgba(232, 121, 254, 0.85);
+  --cyber-line-glow: rgba(34, 211, 238, 0.35);
+}
+
+.my-graph .relation-graph .rg-node-peel .rg-node {
+  color: #94a3b8;
+}
+
+/* 选中：按层级由组件 class 区分 glow（默认兜底） */
+.my-graph .relation-graph .rg-node-peel.rg-node-checked .rg-node {
+  color: #67e8f9;
+}
+
+.my-graph .relation-graph .rg-node-peel.rg-node-checked .rg-node .my-node-text {
+  color: #a5f3fc;
+}
+
+/* 连线颜色由各边 JSON `color` / `fontColor` 决定，此处不再统一覆盖 stroke */
+
+.my-graph .relation-graph .rg-line-peel .rg-line-label {
+  background: linear-gradient(180deg, rgba(8, 15, 35, 0.92), rgba(12, 8, 28, 0.94)) !important;
+  border: 2px solid rgba(100, 116, 139, 0.45) !important;
+  border-radius: 8px !important;
+  font-size: 22px !important;
+  letter-spacing: 0.06em !important;
+  box-shadow:
+    0 0 18px rgba(0, 0, 0, 0.35),
+    inset 0 0 24px rgba(232, 121, 254, 0.05);
+}
+
+.my-graph .relation-graph .rg-line-peel.rg-line-checked .rg-line {
+  stroke: #f472b6 !important;
+  filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.55));
+}
+
+.my-graph .relation-graph .rg-line-peel.rg-line-checked .rg-line-label {
+  color: #fdf4ff !important;
+  border-color: rgba(244, 114, 182, 0.65) !important;
+  background: linear-gradient(180deg, rgba(40, 10, 35, 0.95), rgba(15, 8, 28, 0.96)) !important;
+}
+
+/* 第 2 级：青系 HUD 面板 */
+.my-graph .relation-graph .rg-node-peel:has(.graph-tier2-node) {
+  border: 2px solid rgba(34, 211, 238, 0.55) !important;
+  border-radius: 9999px !important;
+  background: radial-gradient(circle at 30% 25%, rgba(34, 211, 238, 0.14), transparent 55%), #050814 !important;
+  box-shadow:
+    0 0 32px rgba(34, 211, 238, 0.28),
+    inset 0 0 40px rgba(34, 211, 238, 0.06) !important;
+}
+
+.my-graph .relation-graph .rg-node-peel:has(.graph-tier2-node) .rg-node {
+  border: none !important;
+  background: transparent !important;
+}
+
+.my-graph .relation-graph .rg-node-peel.rg-node-checked:has(.graph-tier2-node) {
+  box-shadow:
+    0 0 44px rgba(34, 211, 238, 0.55),
+    inset 0 0 48px rgba(34, 211, 238, 0.12) !important;
+}
+
+/* 第 4 级：品红偏暖底 + 与 2 级完全不同的色相 */
+.my-graph .relation-graph .rg-node-peel:has(.graph-tier4-node) {
+  border: 2px solid rgba(244, 114, 182, 0.65) !important;
+  border-radius: 9999px !important;
+  background: radial-gradient(circle at 70% 75%, rgba(250, 204, 21, 0.08), transparent 50%), #140818 !important;
+  box-shadow:
+    0 0 28px rgba(232, 121, 254, 0.35),
+    inset 0 0 36px rgba(244, 114, 182, 0.09) !important;
+}
+
+.my-graph .relation-graph .rg-node-peel:has(.graph-tier4-node) .rg-node {
+  border: none !important;
+  background: transparent !important;
+}
+
+.my-graph .relation-graph .rg-node-peel.rg-node-checked:has(.graph-tier4-node) {
+  box-shadow:
+    0 0 40px rgba(250, 204, 21, 0.35),
+    0 0 36px rgba(232, 121, 254, 0.45),
+    inset 0 0 40px rgba(244, 114, 182, 0.12) !important;
+}
+
+/* 第 3 级：去掉 peel 描边，圆图外发光在组件内 */
+.my-graph .relation-graph .rg-node-peel:has(.graph-tier3-host) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.my-graph .relation-graph .rg-node-peel:has(.graph-tier3-host) .rg-node {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  outline: none !important;
+}
+
+.my-graph .relation-graph .rg-node-peel.rg-node-checked:has(.graph-tier3-host),
+.my-graph .relation-graph .rg-node-peel.rg-node-checked:has(.graph-tier3-host) .rg-node {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 小地图：霓虹框 */
+.my-graph .relation-graph .rel-miniview {
+  border: 2px solid rgba(34, 211, 238, 0.35) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 0 36px rgba(34, 211, 238, 0.2),
+    inset 0 0 40px rgba(232, 121, 254, 0.06) !important;
+  background: rgba(5, 8, 20, 0.65) !important;
+}
+
+.my-graph .relation-graph .rel-mv-visible-area {
+  border: 2px solid rgba(244, 114, 182, 0.55) !important;
+  box-shadow: 0 0 20px rgba(244, 114, 182, 0.25) !important;
+}

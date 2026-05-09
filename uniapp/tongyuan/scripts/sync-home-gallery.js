@@ -1,6 +1,8 @@
 /**
- * 从 inspira-vue3/public/home-gallery 复制 PNG 到小程序 static/home-gallery，
+ * 从 inspira-vue3/public/home-gallery 复制图片到 static/home-gallery，
  * 并生成 pages/gallery/gallery-data.js（与 src/data/homeGalleryConfig.ts 文案一致）。
+ * 目标文件名使用 g001、g002…（仅 ASCII），避免微信开发者工具对中文路径本地资源返回 500。
+ * 发布前：npm run shrink-gallery（PNG→压缩 JPG）。
  */
 const fs = require('fs')
 const path = require('path')
@@ -87,6 +89,11 @@ function main() {
     process.exit(1)
   }
   fs.mkdirSync(destDir, { recursive: true })
+  if (fs.existsSync(destDir)) {
+    for (const f of fs.readdirSync(destDir)) {
+      fs.unlinkSync(path.join(destDir, f))
+    }
+  }
 
   const files = fs.readdirSync(srcDir).filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f))
   const metas = []
@@ -96,18 +103,19 @@ function main() {
       console.warn('跳过（命名不符）:', file)
       continue
     }
-    fs.copyFileSync(path.join(srcDir, file), path.join(destDir, file))
     metas.push(meta)
   }
   metas.sort((a, b) => sortKey(a) - sortKey(b))
 
-  const items = metas.map((m) => {
+  const items = metas.map((m, index) => {
+    const destPng = `g${String(index + 1).padStart(3, '0')}.png`
+    fs.copyFileSync(path.join(srcDir, m.file), path.join(destDir, destPng))
     const key = `${m.cityShort}-${m.slot}`
     const description =
       DESCRIPTION_MAP[key] ??
       `${m.title}是${m.cityShort}具有代表性的非遗项目，展示其历史渊源、工艺特色与当代传承价值。`
     return {
-      image: `/static/home-gallery/${m.file}`,
+      image: `/static/home-gallery/${destPng}`,
       label: `${m.cityShort} · ${m.slot}`,
       title: m.title,
       description,

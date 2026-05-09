@@ -55,6 +55,11 @@ qianwen:
   image-task-url: ${QIANWEN_IMAGE_TASK_URL:https://dashscope.aliyuncs.com/api/v1/tasks}
   image-size: ${QIANWEN_IMAGE_SIZE:1024*1024}
 
+# RAG（本地 JSONL + 可选 Milvus 向量库）
+rag:
+  # 开发环境若无 Milvus：在 .env 中设 RAG_MILVUS_ENABLED=false，启动将不再连接 19530
+  milvus-enabled: ${RAG_MILVUS_ENABLED:true}
+
 # Milvus
 milvus:
   host: ${MILVUS_HOST}

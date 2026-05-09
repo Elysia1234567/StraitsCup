@@ -1,0 +1,26 @@
+/* 根节点外环：青 ↔ 品红扫光 */
+.cyber-root-ring {
+  background: linear-gradient(135deg, #22d3ee, #e879f9, #22d3ee, #a855f7);
+  background-size: 300% 300%;
+  animation: cyber-root-scan 8s ease-in-out infinite;
+}
+
+@keyframes cyber-root-scan {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.cyber-root-inner {
+  background: radial-gradient(ellipse at 50% 30%, rgba(34, 211, 238, 0.12), transparent 55%), #050814;
+  border: 2px solid rgba(34, 211, 238, 0.35);
+  box-shadow:
+    inset 0 0 48px rgba(232, 121, 254, 0.08),
+    0 0 40px rgba(34, 211, 238, 0.15);
+}

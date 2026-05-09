@@ -1,20 +1,20 @@
 /**
  * uni-app 全局 SCSS（赛博朋克深色，与 styles/cyber.scss 主色对齐）
  */
-$uni-color-primary: #00f5ff;
+$uni-color-primary: #a78bfa;
 
-$uni-text-color: #e8f4ff;
-$uni-text-color-inverse: #0a0a14;
-$uni-text-color-grey: #7a8fb2;
+$uni-text-color: #f3eeff;
+$uni-text-color-inverse: #0a0518;
+$uni-text-color-grey: rgba(196, 188, 220, 0.72);
 $uni-text-color-placeholder: #5c6b8a;
 $uni-text-color-disable: #4a5568;
 
-$uni-bg-color: #050508;
-$uni-bg-color-grey: #0a0a14;
-$uni-bg-color-hover: rgba(0, 245, 255, 0.08);
+$uni-bg-color: #06040f;
+$uni-bg-color-grey: #0a0518;
+$uni-bg-color-hover: rgba(167, 139, 250, 0.12);
 $uni-bg-color-mask: rgba(0, 0, 0, 0.65);
 
-$uni-border-color: rgba(0, 245, 255, 0.25);
+$uni-border-color: rgba(167, 139, 250, 0.28);
 
 $uni-font-size-sm: 12px;
 $uni-font-size-base: 14px;

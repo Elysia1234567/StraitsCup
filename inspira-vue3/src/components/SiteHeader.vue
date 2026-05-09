@@ -28,6 +28,9 @@ const navItemClass = (path) =>
         <RouterLink :class="navItemClass('/infinite-grid')" to="/infinite-grid">
           Models
         </RouterLink>
+        <RouterLink :class="navItemClass('/graph')" to="/graph">
+          Graph
+        </RouterLink>
       </div>
 
       <div class="flex items-center justify-end gap-2.5">

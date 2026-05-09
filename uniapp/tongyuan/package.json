@@ -5,6 +5,8 @@
   "scripts": {
     "gen-tab-icons": "node scripts/gen-tab-icons.js",
     "sync-gallery": "node scripts/sync-home-gallery.js",
+    "shrink-gallery": "node scripts/shrink-gallery-images.js",
+    "prepare-gallery": "node scripts/sync-home-gallery.js && node scripts/shrink-gallery-images.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,6 +17,7 @@
     "wot-design-uni": "^1.14.0"
   },
   "devDependencies": {
-    "sass": "^1.99.0"
+    "sass": "^1.99.0",
+    "sharp": "^0.34.2"
   }
 }

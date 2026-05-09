@@ -4,6 +4,7 @@ import HomePage from '../pages/HomePage.vue';
 import InfiniteGridPage from '../pages/InfiniteGridPage.vue';
 import AgentPage from '../pages/AgentPage.vue';
 import DataPage from '../pages/DataPage.vue';
+import GraphPage from '../pages/GraphPage.vue';
 
 function applyEdgeVisibilityHistoryWorkaround() {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -40,7 +41,7 @@ applyEdgeVisibilityHistoryWorkaround();
 
 /**
  * 路由与布局
- * - 默认布局：顶栏 SiteHeader（Home / Agent / Models）+ 子页面
+ * - 默认布局：顶栏 SiteHeader（Home / Agent / Models / Graph）+ 子页面
  * - /data：全屏 3D 展示，独立顶栏（与 InfiniteGrid 的「卡片跳转」一致，不在主导航中）
  */
 const router = createRouter({
@@ -64,6 +65,11 @@ const router = createRouter({
           path: 'infinite-grid',
           name: 'infinite-grid',
           component: InfiniteGridPage,
+        },
+        {
+          path: 'graph',
+          name: 'graph',
+          component: GraphPage,
         },
       ],
     },

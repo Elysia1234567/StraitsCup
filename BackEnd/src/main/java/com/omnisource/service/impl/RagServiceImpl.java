@@ -47,6 +47,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * RAG 检索服务实现。
@@ -86,11 +87,15 @@ public class RagServiceImpl implements RagService {
     private MilvusClient milvusClient;
     private boolean milvusReady;
 
+    /** 为 false 时不连接 Milvus，仅用本地 JSONL 兜底检索（本地无向量库时适合开发环境）。 */
+    private final boolean milvusEnabled;
+
     public RagServiceImpl(
             ObjectMapper objectMapper,
             @Value("${rag.dataset-path:Util/standardList.jsonl}") String datasetPath,
             @Value("${rag.default-top-k:3}") int defaultTopK,
             @Value("${rag.collection-name:omnisource_rag}") String collectionName,
+            @Value("${rag.milvus-enabled:true}") boolean milvusEnabled,
             @Value("${milvus.host:127.0.0.1}") String milvusHost,
             @Value("${milvus.port:19530}") int milvusPort,
             @Value("${milvus.database:default}") String milvusDatabase,
@@ -103,6 +108,7 @@ public class RagServiceImpl implements RagService {
         this.datasetPath = resolveDatasetPath(datasetPath);
         this.defaultTopK = defaultTopK;
         this.collectionName = collectionName;
+        this.milvusEnabled = milvusEnabled;
         this.milvusUri = buildMilvusUri(milvusHost, milvusPort);
         this.milvusDatabase = StringUtils.hasText(milvusDatabase) ? milvusDatabase : "default";
         this.milvusUsername = milvusUsername;
@@ -111,7 +117,11 @@ public class RagServiceImpl implements RagService {
         this.embeddingEndpoint = resolveEmbeddingEndpoint(qianwenBaseUrl);
         this.embeddingModel = embeddingModel;
 
-        initializeMilvusClient();
+        if (milvusEnabled) {
+            initializeMilvusClient();
+        } else {
+            log.info("rag.milvus-enabled=false，跳过 Milvus 客户端初始化，RAG 使用本地检索");
+        }
     }
 
     @PostConstruct
@@ -127,6 +137,12 @@ public class RagServiceImpl implements RagService {
         if (documents.isEmpty()) {
             milvusReady = false;
             log.warn("RAG 知识库为空，Milvus 同步跳过");
+            return;
+        }
+
+        if (!milvusEnabled) {
+            milvusReady = false;
+            log.info("RAG 已加载 {} 条文档；Milvus 未启用，使用本地关键词检索", documents.size());
             return;
         }
 
@@ -223,7 +239,9 @@ public class RagServiceImpl implements RagService {
         try {
             ConnectParam.Builder builder = ConnectParam.newBuilder()
                     .withUri(milvusUri)
-                    .withDatabaseName(milvusDatabase);
+                    .withDatabaseName(milvusDatabase)
+                    .withConnectTimeout(10L, TimeUnit.SECONDS)
+                    .withIdleTimeout(30L, TimeUnit.SECONDS);
 
             if (StringUtils.hasText(milvusUsername) && StringUtils.hasText(milvusPassword)) {
                 String authorization = Base64.getEncoder()

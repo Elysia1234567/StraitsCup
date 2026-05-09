@@ -6,22 +6,34 @@
       :map-num="12"
       :line-width="28"
       :line-height="6"
-      color="#00f5ff"
-      inactive-color="#7a8fb2"
+      color="#c4b5fd"
+      inactive-color="#948cae"
       :show-scrollbar="false"
       custom-class="cyber-tabs"
     >
       <wd-tab v-for="(t, i) in tabList" :key="i" :title="t">
         <view v-if="Number(activeTab) === i" class="agent-tab-body">
-          <view class="agent-grid">
-            <view v-for="(item, index) in agentList" :key="index" class="agent-card">
-              <view class="card-avatar">
-                <wd-icon :name="item.icon" size="40rpx" color="#061018" />
+          <view v-if="loading" class="loading-tip">加载器灵列表…</view>
+          <view v-else-if="!filteredAgents.length" class="loading-tip">暂无数据，请检查后端 /api/agents</view>
+          <view v-else class="agent-grid">
+            <view v-for="(item, index) in filteredAgents" :key="item.agentCode || index" class="agent-card">
+              <image v-if="item.avatar" class="card-cover" :src="item.avatar" mode="aspectFill" />
+              <view v-else class="card-avatar-fallback">
+                <wd-icon name="user" size="40rpx" color="#061018" />
               </view>
               <view class="card-name">{{ item.name }}</view>
-              <view class="card-desc">{{ item.desc }}</view>
-              <wd-button type="primary" plain hairline size="small" icon="arrow-right" custom-class="card-action">
-                启动
+              <view class="card-code">{{ item.agentCode }}</view>
+              <view class="card-desc">{{ item.personality || '非遗器灵' }}</view>
+              <wd-button
+                type="primary"
+                plain
+                hairline
+                size="small"
+                icon="arrow-right"
+                custom-class="card-action"
+                @click="startWithAgent(item)"
+              >
+                用此器灵问答
               </wd-button>
             </view>
           </view>
@@ -32,20 +44,54 @@
 </template>
 
 <script>
+import { getAgents } from '@/api/backend.js'
+import { setPendingAgentCodes, setActiveRoomId } from '@/utils/storage.js'
+
+/** 与后端 agentCode 前缀一致：fz 福州、xm 厦门 … */
+const TAB_LIST = ['全部', '福州', '厦门', '莆田', '三明', '泉州', '漳州', '南平', '龙岩', '宁德']
+const TAB_PREFIX = [null, 'fz', 'xm', 'pt', 'sm', 'qz', 'zz', 'np', 'ly', 'nd']
+
 export default {
   data() {
     return {
       activeTab: 0,
-      tabList: ['推荐', '效率', '创作', '学习', '生活', '娱乐', '工作'],
-      agentList: [
-        { icon: 'computer', name: '编程助手', desc: '代码编写、调试、解释' },
-        { icon: 'edit-outline', name: '文案大师', desc: '朋友圈、文案、演讲稿' },
-        { icon: 'books', name: '学习助手', desc: '知识点讲解、习题解答' },
-        { icon: 'home', name: '生活顾问', desc: '美食、旅行、生活建议' },
-        { icon: 'chart-bubble', name: '设计助手', desc: 'UI设计、创意灵感' },
-        { icon: 'goods', name: '商业策划', desc: '方案、计划书、营销' },
-      ],
+      tabList: TAB_LIST,
+      agents: [],
+      loading: false,
     }
+  },
+  computed: {
+    filteredAgents() {
+      const prefix = TAB_PREFIX[this.activeTab]
+      if (!prefix) return this.agents
+      const p = `${prefix}_`
+      return this.agents.filter((a) => a.agentCode && String(a.agentCode).startsWith(p))
+    },
+  },
+  onShow() {
+    this.loadAgents()
+  },
+  methods: {
+    async loadAgents() {
+      this.loading = true
+      try {
+        const list = await getAgents()
+        this.agents = Array.isArray(list) ? list : []
+      } catch (e) {
+        console.warn(e)
+        this.agents = []
+        uni.showToast({ title: '加载 Agent 失败', icon: 'none' })
+      } finally {
+        this.loading = false
+      }
+    },
+    startWithAgent(item) {
+      if (!item || !item.agentCode) return
+      setActiveRoomId(null)
+      setPendingAgentCodes([item.agentCode])
+      uni.showToast({ title: '已选择器灵', icon: 'none' })
+      uni.switchTab({ url: '/pages/chat/chat' })
+    },
   },
 }
 </script>
@@ -63,6 +109,13 @@ export default {
   padding: 8rpx 0 24rpx;
 }
 
+.loading-tip {
+  padding: 40rpx 24rpx;
+  font-size: 26rpx;
+  color: $cyber-text-muted;
+  text-align: center;
+}
+
 .cyber-wot {
   :deep(.cyber-tabs.wd-tabs) {
     background: transparent;
@@ -74,18 +127,18 @@ export default {
   }
 
   :deep(.wd-tabs__nav-item) {
-    font-size: 26rpx;
-    padding: 0 20rpx;
+    font-size: 24rpx;
+    padding: 0 14rpx;
   }
 
   :deep(.wd-tabs__nav-item.is-active .wd-tabs__nav-item-text) {
     text-shadow:
-      0 0 8rpx rgba(0, 245, 255, 0.85),
-      0 0 20rpx rgba(0, 245, 255, 0.35);
+      0 0 10rpx rgba(196, 181, 253, 0.75),
+      0 0 24rpx rgba(122, 66, 244, 0.4);
   }
 
   :deep(.wd-tabs__line) {
-    box-shadow: 0 0 12rpx rgba(0, 245, 255, 0.8);
+    box-shadow: 0 0 14rpx rgba(167, 139, 250, 0.65);
     border-radius: 3rpx;
   }
 
@@ -104,20 +157,26 @@ export default {
 
 .agent-card {
   width: 340rpx;
-  border-radius: 18rpx;
-  padding: 28rpx 24rpx 22rpx;
+  padding: 20rpx 20rpx 18rpx;
   text-align: center;
   box-sizing: border-box;
   margin-bottom: 20rpx;
-  background: rgba(8, 14, 32, 0.78);
-  @include glow-border-cyan;
+  @include cyber-content-card;
 }
 
-.card-avatar {
+.card-cover {
+  width: 100%;
+  height: 200rpx;
+  border-radius: $cyber-radius-md;
+  margin-bottom: 14rpx;
+  background: rgba(18, 12, 38, 0.95);
+}
+
+.card-avatar-fallback {
   width: 84rpx;
   height: 84rpx;
   border-radius: 50%;
-  margin: 0 auto 18rpx;
+  margin: 0 auto 14rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -131,18 +190,28 @@ export default {
 .card-name {
   font-size: 28rpx;
   font-weight: 600;
+  margin-bottom: 6rpx;
+  @include neon-text-purple;
+}
+
+.card-code {
+  font-size: 20rpx;
+  color: $cyber-text-muted;
   margin-bottom: 10rpx;
-  @include neon-text-magenta;
+  word-break: break-all;
 }
 
 .card-desc {
   font-size: 22rpx;
   line-height: 1.45;
-  margin-bottom: 16rpx;
+  margin-bottom: 14rpx;
   @include neon-text-soft;
+  text-align: left;
+  max-height: 120rpx;
+  overflow: hidden;
 }
 
 .cyber-wot :deep(.card-action) {
-  box-shadow: 0 0 12rpx rgba(0, 245, 255, 0.2);
+  box-shadow: 0 0 20rpx rgba(122, 66, 244, 0.28);
 }
 </style>
