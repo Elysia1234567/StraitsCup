@@ -7,19 +7,15 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * 单个 Agent 的回答结果。
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AgentReplyResponse {
+public class AgentTraceResponse {
 
     private String agentCode;
     private String title;
-    private String content;
-    private List<String> references;
     private List<RagRetrievalResponse> evidenceChunks;
-    private Boolean searchUsed;
+    private String viewpoint;
+    private String conclusion;
 }

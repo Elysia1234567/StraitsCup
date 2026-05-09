@@ -25,6 +25,15 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:5000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:3000}
+      initialization-fail-timeout: ${DB_INITIALIZATION_FAIL_TIMEOUT_MS:5000}
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:5}
+      minimum-idle: ${DB_MIN_IDLE:1}
+      data-source-properties:
+        connectTimeout: ${DB_CONNECT_TIMEOUT_MS:3000}
+        socketTimeout: ${DB_SOCKET_TIMEOUT_MS:10000}
   data:
     redis:
       host: ${REDIS_HOST}
@@ -104,3 +113,13 @@ chat:
   agent:
     cooldown-seconds: 30
     max-responders: 3
+  multi-agent:
+    agent-timeout-seconds: ${CHAT_MULTI_AGENT_TIMEOUT_SECONDS:20}
+    session-ttl-days: ${CHAT_MULTI_AGENT_SESSION_TTL_DAYS:7}
+
+rag:
+  dataset-path: ${RAG_DATASET_PATH:Util/standardList.jsonl}
+  default-top-k: ${RAG_DEFAULT_TOP_K:3}
+  collection-name: ${RAG_COLLECTION_NAME:omnisource_rag}
+  sync-fixed-delay-ms: ${RAG_SYNC_FIXED_DELAY_MS:3600000}
+  sync-initial-delay-ms: ${RAG_SYNC_INITIAL_DELAY_MS:10000}

@@ -27,12 +27,12 @@
 
           <select
             v-model="voiceDialect"
-            class="h-6 shrink-0 rounded-md border border-white/15 bg-slate-950/80 px-1.5 text-xs text-white/80 outline-none transition hover:bg-white/10 disabled:opacity-50"
+            class="h-6 shrink-0 rounded-md border border-white/20 bg-slate-900/85 px-2 text-xs font-medium tracking-wide text-white outline-none transition hover:bg-slate-800/90 focus:border-violet-300/60 disabled:opacity-50 [color-scheme:dark]"
             :disabled="disabled || voiceRecording || voiceConnecting"
             title="语音识别语言"
           >
             <option value="mandarin">普通话</option>
-            <option value="minnan">闽南语</option>
+            <option value="minnan">闽南话</option>
           </select>
 
           <span v-if="voiceStatusText" class="shrink-0 text-xs text-white/55">
@@ -100,7 +100,7 @@ const props = defineProps({
 
 const emit = defineEmits(['send']);
 
-const voiceDialectLabel = computed(() => (voiceDialect.value === 'minnan' ? '闽南语' : '普通话'));
+const voiceDialectLabel = computed(() => (voiceDialect.value === 'minnan' ? '闽南话' : '普通话'));
 
 const voiceStatusText = computed(() => {
   if (voiceError.value) return voiceError.value;

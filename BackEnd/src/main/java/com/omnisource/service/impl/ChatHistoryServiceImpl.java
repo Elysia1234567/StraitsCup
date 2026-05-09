@@ -90,4 +90,10 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
     public void updateMessageContent(Long messageId, String content) {
         chatMessageMapper.updateContent(messageId, content);
     }
+
+    @Override
+    public void updateMessageFeedback(Long roomId, Long messageId, Integer feedbackStatus) {
+        chatMessageMapper.updateFeedback(roomId, messageId, feedbackStatus);
+        redisTemplate.delete(REDIS_HISTORY_KEY_PREFIX + roomId);
+    }
 }

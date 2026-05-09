@@ -107,6 +107,8 @@ CREATE TABLE IF NOT EXISTS `chat_message` (
     `stream_id` VARCHAR(64) DEFAULT NULL COMMENT '流式消息批次ID',
     `search_enabled` TINYINT NOT NULL DEFAULT 0 COMMENT '是否开启联网搜索',
     `search_results` JSON DEFAULT NULL COMMENT '联网搜索结果摘要',
+    `feedback_status` TINYINT NOT NULL DEFAULT 0 COMMENT '用户反馈: 0-未反馈 1-点赞 -1-点踩',
+    `feedback_time` DATETIME DEFAULT NULL COMMENT '反馈时间',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `is_deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '是否删除: 0-否 1-是',

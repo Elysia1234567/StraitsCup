@@ -185,6 +185,18 @@ const handleSendMessage = (payload) => {
   sendUserMessage(text, { searchEnabled });
 };
 
+const handleMessageFeedback = async ({ messageId, feedbackStatus, message }) => {
+  if (!currentRoomId.value || !messageId || !message) return;
+  const previousStatus = message.feedbackStatus ?? 0;
+  message.feedbackStatus = feedbackStatus;
+  try {
+    await chatApi.updateMessageFeedback(currentRoomId.value, messageId, feedbackStatus);
+  } catch (e) {
+    message.feedbackStatus = previousStatus;
+    bootError.value = e instanceof Error ? e.message : String(e);
+  }
+};
+
 const handleGenerateImage = async () => {
   const prompt = imagePrompt.value.trim();
   if (!prompt || generatingImage.value) return;
@@ -458,7 +470,12 @@ watch(roomChatAgents, (agents) => {
             </div>
 
             <div v-else class="mx-auto max-w-3xl">
-              <MessageBubble v-for="(message, index) in messages" :key="messageKey(message, index)" :message="message" />
+              <MessageBubble
+                v-for="(message, index) in messages"
+                :key="messageKey(message, index)"
+                :message="message"
+                @feedback-change="handleMessageFeedback"
+              />
             </div>
           </div>
 

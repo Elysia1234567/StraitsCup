@@ -14,20 +14,25 @@ import io.milvus.param.MetricType;
 import io.milvus.param.R;
 import io.milvus.param.collection.CreateCollectionParam;
 import io.milvus.param.collection.DropCollectionParam;
-import io.milvus.param.collection.FlushParam;
 import io.milvus.param.collection.FieldType;
+import io.milvus.param.collection.FlushParam;
 import io.milvus.param.collection.LoadCollectionParam;
+import io.milvus.param.dml.DeleteParam;
 import io.milvus.param.dml.InsertParam;
+import io.milvus.param.dml.QueryParam;
 import io.milvus.param.dml.SearchParam;
 import io.milvus.param.index.CreateIndexParam;
+import io.milvus.response.QueryResultsWrapper;
 import io.milvus.response.SearchResultsWrapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
@@ -39,63 +44,71 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-/**
- * RAG 检索服务实现。
- */
 @Service
 public class RagServiceImpl implements RagService {
 
     private static final Logger log = LoggerFactory.getLogger(RagServiceImpl.class);
 
     private static final String FIELD_ID = "id";
+    private static final String FIELD_DOC_KEY = "doc_key";
     private static final String FIELD_TITLE = "title";
     private static final String FIELD_CONTENT = "content";
     private static final String FIELD_SOURCE = "source";
+    private static final String FIELD_METADATA = "metadata";
     private static final String FIELD_EMBEDDING = "embedding";
+    private static final String REDIS_HASH_PREFIX = "rag:sync:fingerprint:";
+    private static final String REDIS_SCHEMA_VERSION_KEY = "rag:milvus:schema:version:";
+    private static final String CURRENT_SCHEMA_VERSION = "3";
 
     private static final int TITLE_MAX_LENGTH = 512;
     private static final int CONTENT_MAX_LENGTH = 65535;
     private static final int SOURCE_MAX_LENGTH = 1024;
+    private static final int DOC_KEY_MAX_LENGTH = 1024;
+    private static final int METADATA_MAX_LENGTH = 8192;
+    private static final int INSERT_BATCH_SIZE = 50;
 
     private final ObjectMapper objectMapper;
+    private final StringRedisTemplate redisTemplate;
     private final Path datasetPath;
     private final int defaultTopK;
-
     private final String collectionName;
-    private final String milvusUri;
+    private final String milvusHost;
+    private final int milvusPort;
     private final String milvusDatabase;
     private final String milvusUsername;
     private final String milvusPassword;
-
     private final String qianwenApiKey;
     private final String embeddingEndpoint;
     private final String embeddingModel;
-
     private final List<KnowledgeDocument> documents = new ArrayList<>();
     private final RestTemplate restTemplate = new RestTemplate();
 
     private MilvusClient milvusClient;
     private boolean milvusReady;
-
-    /** 为 false 时不连接 Milvus，仅用本地 JSONL 兜底检索（本地无向量库时适合开发环境）。 */
-    private final boolean milvusEnabled;
+    private boolean milvusCollectionPrepared;
+    private boolean docKeyFieldMissing;
 
     public RagServiceImpl(
             ObjectMapper objectMapper,
+            StringRedisTemplate redisTemplate,
             @Value("${rag.dataset-path:Util/standardList.jsonl}") String datasetPath,
             @Value("${rag.default-top-k:3}") int defaultTopK,
             @Value("${rag.collection-name:omnisource_rag}") String collectionName,
-            @Value("${rag.milvus-enabled:true}") boolean milvusEnabled,
             @Value("${milvus.host:127.0.0.1}") String milvusHost,
             @Value("${milvus.port:19530}") int milvusPort,
             @Value("${milvus.database:default}") String milvusDatabase,
@@ -105,63 +118,51 @@ public class RagServiceImpl implements RagService {
             @Value("${qianwen.base-url:https://dashscope.aliyuncs.com/compatible-mode}") String qianwenBaseUrl,
             @Value("${qianwen.embedding-model:text-embedding-v3}") String embeddingModel) {
         this.objectMapper = objectMapper;
+        this.redisTemplate = redisTemplate;
         this.datasetPath = resolveDatasetPath(datasetPath);
         this.defaultTopK = defaultTopK;
         this.collectionName = collectionName;
-        this.milvusEnabled = milvusEnabled;
-        this.milvusUri = buildMilvusUri(milvusHost, milvusPort);
+        this.milvusHost = StringUtils.hasText(milvusHost) ? milvusHost.trim() : "127.0.0.1";
+        this.milvusPort = milvusPort > 0 ? milvusPort : 19530;
         this.milvusDatabase = StringUtils.hasText(milvusDatabase) ? milvusDatabase : "default";
         this.milvusUsername = milvusUsername;
         this.milvusPassword = milvusPassword;
         this.qianwenApiKey = qianwenApiKey;
         this.embeddingEndpoint = resolveEmbeddingEndpoint(qianwenBaseUrl);
         this.embeddingModel = embeddingModel;
-
-        if (milvusEnabled) {
-            initializeMilvusClient();
-        } else {
-            log.info("rag.milvus-enabled=false，跳过 Milvus 客户端初始化，RAG 使用本地检索");
-        }
+        initializeMilvusClient();
     }
 
     @PostConstruct
     public void init() {
-        reload();
+        try {
+            refreshAndSync();
+        } catch (Exception e) {
+            milvusReady = false;
+            log.warn("RAG init skipped, falling back to local retrieval only: {}", e.getMessage(), e);
+        }
+    }
+
+    @Scheduled(
+            fixedDelayString = "${rag.sync-fixed-delay-ms:3600000}",
+            initialDelayString = "${rag.sync-initial-delay-ms:10000}"
+    )
+    public void scheduledSync() {
+        try {
+            refreshAndSync();
+        } catch (Exception e) {
+            milvusReady = false;
+            log.warn("RAG scheduled sync failed, keeping local retrieval only: {}", e.getMessage(), e);
+        }
     }
 
     @Override
     public synchronized void reload() {
-        documents.clear();
-        loadLocalDocuments();
-
-        if (documents.isEmpty()) {
-            milvusReady = false;
-            log.warn("RAG 知识库为空，Milvus 同步跳过");
-            return;
-        }
-
-        if (!milvusEnabled) {
-            milvusReady = false;
-            log.info("RAG 已加载 {} 条文档；Milvus 未启用，使用本地关键词检索", documents.size());
-            return;
-        }
-
-        if (milvusClient == null) {
-            initializeMilvusClient();
-        }
-
-        if (milvusClient == null) {
-            milvusReady = false;
-            log.warn("Milvus 客户端未初始化，当前使用本地兜底检索");
-            return;
-        }
-
         try {
-            rebuildMilvusCollection();
-            milvusReady = true;
-        } catch (RuntimeException e) {
+            refreshAndSync();
+        } catch (Exception e) {
             milvusReady = false;
-            log.warn("Milvus 同步失败，回退到本地检索: {}", e.getMessage(), e);
+            log.warn("RAG reload failed, keeping local retrieval only: {}", e.getMessage(), e);
         }
     }
 
@@ -169,7 +170,6 @@ public class RagServiceImpl implements RagService {
     public synchronized List<RagRetrievalResponse> retrieve(String question, int topK) {
         int limit = Math.max(1, topK > 0 ? topK : defaultTopK);
         String normalizedQuestion = normalize(question);
-
         if (!StringUtils.hasText(normalizedQuestion) || documents.isEmpty()) {
             return List.of();
         }
@@ -181,7 +181,7 @@ public class RagServiceImpl implements RagService {
                     return milvusResults;
                 }
             } catch (RuntimeException e) {
-                log.warn("Milvus 检索失败，回退到本地检索: {}", e.getMessage());
+                log.warn("Milvus retrieval failed, fallback to local search: {}", e.getMessage());
             }
         }
 
@@ -197,11 +197,11 @@ public class RagServiceImpl implements RagService {
     public synchronized String buildContext(String question, int topK) {
         List<RagRetrievalResponse> results = retrieve(question, topK);
         if (results.isEmpty()) {
-            return "未检索到相关知识。";
+            return "No related knowledge found.";
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.append("已检索到的相关知识：\n");
+        builder.append("Related knowledge:\n");
         for (int i = 0; i < results.size(); i++) {
             RagRetrievalResponse item = results.get(i);
             builder.append("\n[").append(i + 1).append("] ")
@@ -214,17 +214,17 @@ public class RagServiceImpl implements RagService {
                 Object category = metadata.get("category");
                 Object region = metadata.get("region");
                 if (level != null) {
-                    builder.append("- 非遗级别：").append(level).append('\n');
+                    builder.append("- level: ").append(level).append('\n');
                 }
                 if (category != null) {
-                    builder.append("- 类别：").append(category).append('\n');
+                    builder.append("- category: ").append(category).append('\n');
                 }
                 if (region != null) {
-                    builder.append("- 地区：").append(region).append('\n');
+                    builder.append("- region: ").append(region).append('\n');
                 }
             }
 
-            builder.append("- 内容：").append(item.getContent()).append('\n');
+            builder.append("- content: ").append(item.getContent()).append('\n');
         }
 
         return builder.toString();
@@ -235,197 +235,394 @@ public class RagServiceImpl implements RagService {
         return !documents.isEmpty();
     }
 
-    private void initializeMilvusClient() {
-        try {
-            ConnectParam.Builder builder = ConnectParam.newBuilder()
-                    .withUri(milvusUri)
-                    .withDatabaseName(milvusDatabase)
-                    .withConnectTimeout(10L, TimeUnit.SECONDS)
-                    .withIdleTimeout(30L, TimeUnit.SECONDS);
-
-            if (StringUtils.hasText(milvusUsername) && StringUtils.hasText(milvusPassword)) {
-                String authorization = Base64.getEncoder()
-                        .encodeToString((milvusUsername + ":" + milvusPassword).getBytes(StandardCharsets.UTF_8));
-                builder.withAuthorization(authorization);
-            }
-
-            this.milvusClient = new MilvusServiceClient(builder.build());
-            log.info("Milvus 客户端初始化完成: uri={}, db={}", milvusUri, milvusDatabase);
-        } catch (RuntimeException e) {
-            this.milvusClient = null;
-            log.warn("Milvus 客户端初始化失败，将使用本地检索兜底: {}", e.getMessage(), e);
-        }
+    private synchronized void refreshAndSync() {
+        documents.clear();
+        loadLocalDocuments();
+        syncLocalDocuments();
     }
 
-    private void rebuildMilvusCollection() {
-        dropCollectionQuietly();
-
-        List<KnowledgeDocument> snapshot = new ArrayList<>(documents);
-        if (snapshot.isEmpty()) {
+    private void syncLocalDocuments() {
+        if (documents.isEmpty()) {
+            milvusReady = false;
             return;
         }
 
-        List<Float> firstEmbedding = embedText(buildEmbeddingText(snapshot.get(0)));
-        if (firstEmbedding.isEmpty()) {
-            throw new IllegalStateException("Embedding 返回为空，无法创建 Milvus 集合");
+        if (milvusClient == null) {
+            initializeMilvusClient();
+        }
+        if (milvusClient == null) {
+            milvusReady = false;
+            return;
         }
 
-        createMilvusCollection(firstEmbedding.size());
-        insertDocuments(snapshot, firstEmbedding.size());
+        if (shouldRebuildBeforeSync()) {
+            log.info("Milvus schema version mismatch or unknown, rebuilding collection first: {}", collectionName);
+            rebuildCollectionAndResync();
+            markSchemaVersion();
+            return;
+        }
 
-        milvusClient.flush(FlushParam.newBuilder()
-                .withDatabaseName(milvusDatabase)
-                .withCollectionNames(List.of(collectionName))
-                .withSyncFlush(Boolean.TRUE)
-                .build());
+        List<SyncCandidate> candidates = new ArrayList<>();
+        Integer embeddingDimension = null;
+        docKeyFieldMissing = false;
 
-        milvusClient.loadCollection(LoadCollectionParam.newBuilder()
-            .withDatabaseName(milvusDatabase)
-            .withCollectionName(collectionName)
-            .build());
-
-        log.info("Milvus 知识库同步完成: collection={}, rows={}", collectionName, snapshot.size());
-    }
-
-        private void createMilvusCollection(int dimension) {
-        List<FieldType> fieldTypes = List.of(
-            FieldType.newBuilder()
-                .withName(FIELD_ID)
-                .withDataType(DataType.Int64)
-                .withPrimaryKey(true)
-                .withAutoID(true)
-                .build(),
-            FieldType.newBuilder()
-                .withName(FIELD_TITLE)
-                .withDataType(DataType.VarChar)
-                .withMaxLength(TITLE_MAX_LENGTH)
-                .build(),
-            FieldType.newBuilder()
-                .withName(FIELD_CONTENT)
-                .withDataType(DataType.VarChar)
-                .withMaxLength(CONTENT_MAX_LENGTH)
-                .build(),
-            FieldType.newBuilder()
-                .withName(FIELD_SOURCE)
-                .withDataType(DataType.VarChar)
-                .withMaxLength(SOURCE_MAX_LENGTH)
-                .build(),
-            FieldType.newBuilder()
-                .withName(FIELD_EMBEDDING)
-                .withDataType(DataType.FloatVector)
-                .withDimension(dimension)
-                .build());
-
-        CreateCollectionParam createCollectionParam = CreateCollectionParam.newBuilder()
-            .withCollectionName(collectionName)
-            .withDatabaseName(milvusDatabase)
-            .withDescription("OmniSource RAG knowledge base")
-            .withShardsNum(1)
-            .withFieldTypes(fieldTypes)
-            .build();
-
-        milvusClient.createCollection(createCollectionParam);
-
-        CreateIndexParam createIndexParam = CreateIndexParam.newBuilder()
-                .withCollectionName(collectionName)
-                .withDatabaseName(milvusDatabase)
-                .withFieldName(FIELD_EMBEDDING)
-                .withIndexType(IndexType.AUTOINDEX)
-                .withIndexName("embedding_index")
-                .withMetricType(MetricType.COSINE)
-                .build();
-
-        milvusClient.createIndex(createIndexParam);
-    }
-
-    private void insertDocuments(List<KnowledgeDocument> docs, int dimension) {
-        List<String> titles = new ArrayList<>(docs.size());
-        List<String> contents = new ArrayList<>(docs.size());
-        List<String> sources = new ArrayList<>(docs.size());
-        List<List<Float>> embeddings = new ArrayList<>(docs.size());
-
-        for (KnowledgeDocument doc : docs) {
-            List<Float> embedding = embedText(buildEmbeddingText(doc));
-            if (embedding.isEmpty()) {
+        for (KnowledgeDocument doc : documents) {
+            String docKey = resolveDocKey(doc);
+            if (!StringUtils.hasText(docKey)) {
                 continue;
             }
-            if (embedding.size() != dimension) {
-                throw new IllegalStateException("Embedding 维度不一致");
+
+            String fingerprint = fingerprint(doc);
+            String cachedFingerprint = milvusCollectionPrepared ? readCachedFingerprint(docKey) : "";
+            if (milvusCollectionPrepared && fingerprint.equals(cachedFingerprint)) {
+                continue;
             }
 
-            titles.add(safeText(doc.title()));
-            contents.add(safeText(doc.content()));
-            sources.add(resolveSource(doc));
-            embeddings.add(embedding);
+            try {
+                List<ExistingDocument> existingDocuments = queryExistingDocuments(docKey);
+                if (docKeyFieldMissing) {
+                    break;
+                }
+                if (!existingDocuments.isEmpty()) {
+                    boolean alreadySynced = existingDocuments.stream()
+                            .anyMatch(existing -> fingerprint.equals(existing.fingerprint()));
+                    if (alreadySynced) {
+                        cacheFingerprint(docKey, fingerprint);
+                        continue;
+                    }
+                    deleteExistingDocuments(existingDocuments);
+                }
+
+                List<Float> embedding = embedText(buildEmbeddingText(doc));
+                if (embedding.isEmpty()) {
+                    continue;
+                }
+                if (embeddingDimension == null) {
+                    embeddingDimension = embedding.size();
+                }
+                candidates.add(new SyncCandidate(doc, docKey, fingerprint, embedding));
+            } catch (Exception e) {
+                log.warn("RAG document sync failed: {}", e.getMessage());
+            }
         }
 
-        if (embeddings.isEmpty()) {
-            throw new IllegalStateException("没有可插入的文档向量");
+        if (docKeyFieldMissing) {
+            log.warn("Detected legacy Milvus schema without doc_key. Rebuilding collection: {}", collectionName);
+            rebuildCollectionAndResync();
+            return;
         }
 
-        List<InsertParam.Field> fields = new ArrayList<>();
-        fields.add(new InsertParam.Field(FIELD_TITLE, titles));
-        fields.add(new InsertParam.Field(FIELD_CONTENT, contents));
-        fields.add(new InsertParam.Field(FIELD_SOURCE, sources));
-        fields.add(new InsertParam.Field(FIELD_EMBEDDING, embeddings));
+        if (candidates.isEmpty()) {
+            milvusReady = safeLoadCollection();
+            return;
+        }
 
-        InsertParam insertParam = InsertParam.newBuilder()
-                .withDatabaseName(milvusDatabase)
-                .withCollectionName(collectionName)
-                .withFields(fields)
-                .build();
+        if (embeddingDimension == null || !ensureMilvusCollection(embeddingDimension)) {
+            milvusReady = false;
+            return;
+        }
 
-        milvusClient.insert(insertParam);
+        insertCandidates(candidates);
+        for (SyncCandidate candidate : candidates) {
+            cacheFingerprint(candidate.docKey(), candidate.fingerprint());
+        }
+
+        try {
+            milvusReady = safeFlushAndLoad();
+        } catch (RuntimeException e) {
+            milvusReady = false;
+            log.warn("Milvus sync finish load failed: {}", e.getMessage());
+        }
     }
 
-    private void dropCollectionQuietly() {
+    private void rebuildCollectionAndResync() {
+        if (milvusClient == null) {
+            milvusReady = false;
+            return;
+        }
+
         try {
             milvusClient.dropCollection(DropCollectionParam.newBuilder()
                     .withDatabaseName(milvusDatabase)
                     .withCollectionName(collectionName)
                     .build());
         } catch (RuntimeException e) {
-            log.debug("Milvus 集合不存在或无法删除，继续创建: {}", e.getMessage());
+            log.warn("Drop collection skipped/failed (may not exist): {}", e.getMessage());
         }
-    }
 
-    private void loadLocalDocuments() {
-        if (!Files.exists(datasetPath)) {
-            log.warn("RAG 知识库文件不存在: {}", datasetPath.toAbsolutePath());
-            log.warn("当前工作目录: {}", Paths.get(".").toAbsolutePath().normalize());
+        milvusCollectionPrepared = false;
+        docKeyFieldMissing = false;
+
+        List<SyncCandidate> allCandidates = new ArrayList<>();
+        Integer dimension = null;
+        for (KnowledgeDocument doc : documents) {
+            List<Float> embedding = embedText(buildEmbeddingText(doc));
+            if (embedding.isEmpty()) {
+                continue;
+            }
+            if (dimension == null) {
+                dimension = embedding.size();
+            }
+            allCandidates.add(new SyncCandidate(doc, resolveDocKey(doc), fingerprint(doc), embedding));
+        }
+
+        if (dimension == null || allCandidates.isEmpty()) {
+            milvusReady = false;
             return;
         }
 
-        try (BufferedReader reader = Files.newBufferedReader(datasetPath, StandardCharsets.UTF_8)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (!StringUtils.hasText(line)) {
-                    continue;
-                }
+        if (!ensureMilvusCollection(dimension)) {
+            milvusReady = false;
+            return;
+        }
 
-                JsonNode node = objectMapper.readTree(line);
-                String id = safeText(node.path("id").asText(null));
-                String title = safeText(node.path("title").asText(null));
-                String content = safeText(node.path("content").asText(null));
+        insertCandidates(allCandidates);
+        for (SyncCandidate candidate : allCandidates) {
+            cacheFingerprint(candidate.docKey(), candidate.fingerprint());
+        }
 
-                Map<String, Object> metadata = new LinkedHashMap<>();
-                JsonNode metadataNode = node.path("metadata");
-                if (metadataNode != null && metadataNode.isObject()) {
-                    metadata = objectMapper.convertValue(metadataNode, new TypeReference<Map<String, Object>>() {
-                    });
-                }
+        try {
+            milvusReady = safeFlushAndLoad();
+            markSchemaVersion();
+        } catch (RuntimeException e) {
+            milvusReady = false;
+            log.warn("Milvus load after rebuild failed: {}", e.getMessage());
+        }
+    }
 
-                if (!StringUtils.hasText(id)) {
-                    id = title;
-                }
+    private void initializeMilvusClient() {
+        try {
+            ConnectParam.Builder builder = ConnectParam.newBuilder()
+                    .withHost(milvusHost)
+                    .withPort(milvusPort)
+                    .withDatabaseName(milvusDatabase);
 
-                documents.add(new KnowledgeDocument(id, title, content, metadata));
+            if (StringUtils.hasText(milvusUsername) && StringUtils.hasText(milvusPassword)) {
+                String authorization = java.util.Base64.getEncoder()
+                        .encodeToString((milvusUsername + ":" + milvusPassword).getBytes(StandardCharsets.UTF_8));
+                builder.withAuthorization(authorization);
             }
 
-            log.info("RAG 知识库加载完成: {} 条, 文件: {}", documents.size(), datasetPath.toAbsolutePath());
-        } catch (IOException e) {
-            log.error("加载 RAG 知识库失败: {}", datasetPath.toAbsolutePath(), e);
+            milvusClient = new MilvusServiceClient(builder.build());
+            log.info("Milvus client ready: host={}, port={}, db={}", milvusHost, milvusPort, milvusDatabase);
+        } catch (RuntimeException e) {
+            milvusClient = null;
+            log.warn("Milvus client init failed: {}", e.getMessage(), e);
+        }
+    }
+
+    private boolean ensureMilvusCollection(int dimension) {
+        if (milvusCollectionPrepared) {
+            return true;
+        }
+
+        try {
+            List<FieldType> fieldTypes = List.of(
+                    FieldType.newBuilder()
+                            .withName(FIELD_ID)
+                            .withDataType(DataType.Int64)
+                            .withPrimaryKey(true)
+                            .withAutoID(true)
+                            .build(),
+                    FieldType.newBuilder()
+                            .withName(FIELD_DOC_KEY)
+                            .withDataType(DataType.VarChar)
+                            .withMaxLength(DOC_KEY_MAX_LENGTH)
+                            .build(),
+                    FieldType.newBuilder()
+                            .withName(FIELD_TITLE)
+                            .withDataType(DataType.VarChar)
+                            .withMaxLength(TITLE_MAX_LENGTH)
+                            .build(),
+                    FieldType.newBuilder()
+                            .withName(FIELD_CONTENT)
+                            .withDataType(DataType.VarChar)
+                            .withMaxLength(CONTENT_MAX_LENGTH)
+                            .build(),
+                    FieldType.newBuilder()
+                            .withName(FIELD_SOURCE)
+                            .withDataType(DataType.VarChar)
+                            .withMaxLength(SOURCE_MAX_LENGTH)
+                            .build(),
+                    FieldType.newBuilder()
+                            .withName(FIELD_METADATA)
+                            .withDataType(DataType.VarChar)
+                            .withMaxLength(METADATA_MAX_LENGTH)
+                            .build(),
+                    FieldType.newBuilder()
+                            .withName(FIELD_EMBEDDING)
+                            .withDataType(DataType.FloatVector)
+                            .withDimension(dimension)
+                            .build());
+
+            milvusClient.createCollection(CreateCollectionParam.newBuilder()
+                    .withCollectionName(collectionName)
+                    .withDatabaseName(milvusDatabase)
+                    .withDescription("OmniSource RAG knowledge base")
+                    .withShardsNum(1)
+                    .withFieldTypes(fieldTypes)
+                    .build());
+
+            milvusClient.createIndex(CreateIndexParam.newBuilder()
+                    .withCollectionName(collectionName)
+                    .withDatabaseName(milvusDatabase)
+                    .withFieldName(FIELD_EMBEDDING)
+                    .withIndexType(IndexType.AUTOINDEX)
+                    .withIndexName("embedding_index")
+                    .withMetricType(MetricType.COSINE)
+                    .build());
+
+            milvusCollectionPrepared = true;
+            return true;
+        } catch (Exception e) {
+            if (isCollectionAlreadyExists(e)) {
+                milvusCollectionPrepared = true;
+                return true;
+            }
+            log.warn("Milvus collection prepare failed: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private void insertCandidates(List<SyncCandidate> candidates) {
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        int start = 0;
+        while (start < candidates.size()) {
+            int end = Math.min(start + INSERT_BATCH_SIZE, candidates.size());
+            insertCandidateBatchWithFallback(candidates.subList(start, end));
+            start = end;
+        }
+    }
+
+    private void insertCandidateBatchWithFallback(List<SyncCandidate> batch) {
+        try {
+            insertCandidateBatch(batch);
+        } catch (Exception firstFailure) {
+            if (batch.size() <= 1) {
+                SyncCandidate candidate = batch.get(0);
+                log.warn("Milvus insert skipped for docKey={}, reason={}", candidate.docKey(), firstFailure.getMessage());
+                return;
+            }
+
+            int mid = batch.size() / 2;
+            insertCandidateBatchWithFallback(batch.subList(0, mid));
+            insertCandidateBatchWithFallback(batch.subList(mid, batch.size()));
+        }
+    }
+
+    private void insertCandidateBatch(List<SyncCandidate> batch) {
+        if (batch.isEmpty()) {
+            return;
+        }
+
+        int dimension = batch.get(0).embedding().size();
+        List<String> docKeys = new ArrayList<>(batch.size());
+        List<String> titles = new ArrayList<>(batch.size());
+        List<String> contents = new ArrayList<>(batch.size());
+        List<String> sources = new ArrayList<>(batch.size());
+        List<String> metadataJsonList = new ArrayList<>(batch.size());
+        List<List<Float>> embeddings = new ArrayList<>(batch.size());
+
+        for (SyncCandidate candidate : batch) {
+            if (candidate.embedding().size() != dimension) {
+                throw new IllegalStateException("Embedding dimension mismatch");
+            }
+            docKeys.add(truncate(safeText(candidate.docKey()), DOC_KEY_MAX_LENGTH));
+            titles.add(truncate(safeText(candidate.doc().title()), TITLE_MAX_LENGTH));
+            contents.add(truncate(safeText(candidate.doc().content()), CONTENT_MAX_LENGTH));
+            sources.add(truncate(resolveSource(candidate.doc()), SOURCE_MAX_LENGTH));
+            metadataJsonList.add(truncate(serializeMilvusMetadata(candidate.doc().metadata()), METADATA_MAX_LENGTH));
+            embeddings.add(candidate.embedding());
+        }
+
+        List<InsertParam.Field> fields = new ArrayList<>();
+        fields.add(new InsertParam.Field(FIELD_DOC_KEY, docKeys));
+        fields.add(new InsertParam.Field(FIELD_TITLE, titles));
+        fields.add(new InsertParam.Field(FIELD_CONTENT, contents));
+        fields.add(new InsertParam.Field(FIELD_SOURCE, sources));
+        fields.add(new InsertParam.Field(FIELD_METADATA, metadataJsonList));
+        fields.add(new InsertParam.Field(FIELD_EMBEDDING, embeddings));
+
+        try {
+            milvusClient.insert(InsertParam.newBuilder()
+                    .withDatabaseName(milvusDatabase)
+                    .withCollectionName(collectionName)
+                    .withFields(fields)
+                    .build());
+        } catch (Exception e) {
+            log.warn("Milvus insert batch failed: {}", e.getMessage());
+            throw e instanceof RuntimeException runtimeException ? runtimeException : new RuntimeException(e);
+        }
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        if (value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
+    }
+
+    private void deleteExistingDocuments(List<ExistingDocument> existingDocuments) {
+        List<Long> ids = existingDocuments.stream()
+                .map(ExistingDocument::primaryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return;
+        }
+
+        String expr = FIELD_ID + " in [" + ids.stream().map(String::valueOf).collect(Collectors.joining(",")) + "]";
+        milvusClient.delete(DeleteParam.newBuilder()
+                .withCollectionName(collectionName)
+                .withExpr(expr)
+                .build());
+    }
+
+    private List<ExistingDocument> queryExistingDocuments(String docKey) {
+        try {
+            String expr = FIELD_DOC_KEY + " == " + quote(docKey);
+            R<?> response = milvusClient.query(QueryParam.newBuilder()
+                    .withCollectionName(collectionName)
+                    .withExpr(expr)
+                    .withOutFields(List.of(FIELD_ID, FIELD_DOC_KEY, FIELD_TITLE, FIELD_CONTENT, FIELD_SOURCE, FIELD_METADATA))
+                    .build());
+
+            if (response == null || response.getData() == null) {
+                return List.of();
+            }
+
+            QueryResultsWrapper wrapper = new QueryResultsWrapper((io.milvus.grpc.QueryResults) response.getData());
+            List<QueryResultsWrapper.RowRecord> rows = wrapper.getRowRecords();
+            if (rows == null || rows.isEmpty()) {
+                return List.of();
+            }
+
+            List<ExistingDocument> existingDocuments = new ArrayList<>(rows.size());
+            for (QueryResultsWrapper.RowRecord row : rows) {
+                Long primaryId = toLong(row.get(FIELD_ID));
+                String title = safeText(asString(row.get(FIELD_TITLE)));
+                String content = safeText(asString(row.get(FIELD_CONTENT)));
+                String source = safeText(asString(row.get(FIELD_SOURCE)));
+                String metadata = safeText(asString(row.get(FIELD_METADATA)));
+                String fingerprint = fingerprintFromFields(docKey, title, content, source, metadata);
+                existingDocuments.add(new ExistingDocument(primaryId, fingerprint));
+            }
+            return existingDocuments;
+        } catch (Exception e) {
+            if (isDocKeyMissingError(e)) {
+                docKeyFieldMissing = true;
+                log.warn("Milvus schema mismatch detected: {}", e.getMessage());
+                return List.of();
+            }
+            log.warn("Query synced docs failed: {}", e.getMessage());
+            return List.of();
         }
     }
 
@@ -440,16 +637,15 @@ public class RagServiceImpl implements RagService {
                 .withCollectionName(collectionName)
                 .build());
 
-        SearchParam searchParam = SearchParam.newBuilder()
+        R<?> response = milvusClient.search(SearchParam.newBuilder()
                 .withCollectionName(collectionName)
                 .withMetricType(MetricType.COSINE)
                 .withTopK(topK)
                 .withVectors(List.of(queryEmbedding))
                 .withVectorFieldName(FIELD_EMBEDDING)
-                .withOutFields(List.of(FIELD_TITLE, FIELD_CONTENT, FIELD_SOURCE))
-                .build();
+                .withOutFields(List.of(FIELD_DOC_KEY, FIELD_TITLE, FIELD_CONTENT, FIELD_SOURCE, FIELD_METADATA))
+                .build());
 
-        R<?> response = milvusClient.search(searchParam);
         if (response == null || response.getData() == null) {
             return List.of();
         }
@@ -463,17 +659,17 @@ public class RagServiceImpl implements RagService {
         List<RagRetrievalResponse> results = new ArrayList<>(scores.size());
         for (SearchResultsWrapper.IDScore score : scores) {
             Map<String, Object> fieldValues = score.getFieldValues();
+            String docKey = safeText(asString(fieldValues.get(FIELD_DOC_KEY)));
             String title = safeText(asString(fieldValues.get(FIELD_TITLE)));
             String content = safeText(asString(fieldValues.get(FIELD_CONTENT)));
             String source = safeText(asString(fieldValues.get(FIELD_SOURCE)));
-
-            Map<String, Object> metadata = new LinkedHashMap<>();
+            Map<String, Object> metadata = parseMetadata(asString(fieldValues.get(FIELD_METADATA)));
             if (StringUtils.hasText(source)) {
-                metadata.put("source", source);
+                metadata.putIfAbsent("source", source);
             }
 
             results.add(RagRetrievalResponse.builder()
-                    .id(String.valueOf(score.getLongID()))
+                    .id(StringUtils.hasText(docKey) ? docKey : String.valueOf(score.getLongID()))
                     .title(title)
                     .score((double) score.getScore())
                     .content(content)
@@ -493,7 +689,6 @@ public class RagServiceImpl implements RagService {
         String normalizedWorks = normalize(asString(doc.metadata().get("works")));
 
         double score = 0.0;
-
         if (StringUtils.hasText(normalizedTitle) && normalizedQuestion.contains(normalizedTitle)) {
             score += 80.0;
         }
@@ -524,6 +719,71 @@ public class RagServiceImpl implements RagService {
                 .build();
     }
 
+    private void loadLocalDocuments() {
+        if (!Files.exists(datasetPath)) {
+            log.warn("RAG dataset not found: {}", datasetPath.toAbsolutePath());
+            log.warn("Working directory: {}", Paths.get(".").toAbsolutePath().normalize());
+            return;
+        }
+
+        try (BufferedReader reader = Files.newBufferedReader(datasetPath, StandardCharsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!StringUtils.hasText(line)) {
+                    continue;
+                }
+
+                JsonNode node = objectMapper.readTree(line);
+                String id = safeText(node.path("id").asText(null));
+                String title = safeText(node.path("title").asText(null));
+                String content = safeText(node.path("content").asText(null));
+                Map<String, Object> metadata = new LinkedHashMap<>();
+                JsonNode metadataNode = node.path("metadata");
+                if (metadataNode != null && metadataNode.isObject()) {
+                    metadata = objectMapper.convertValue(metadataNode, new TypeReference<Map<String, Object>>() {
+                    });
+                }
+                if (!StringUtils.hasText(id)) {
+                    id = title;
+                }
+                documents.add(new KnowledgeDocument(id, title, content, metadata));
+            }
+
+            log.info("RAG dataset loaded: {} docs, file={}", documents.size(), datasetPath.toAbsolutePath());
+        } catch (IOException e) {
+            log.error("Failed to load RAG dataset: {}", datasetPath.toAbsolutePath(), e);
+        }
+    }
+
+    private void cacheFingerprint(String docKey, String fingerprint) {
+        String redisKey = redisKey();
+        redisTemplate.opsForHash().put(redisKey, docKey, fingerprint);
+        redisTemplate.expire(redisKey, 30, TimeUnit.DAYS);
+    }
+
+    private String readCachedFingerprint(String docKey) {
+        Object value = redisTemplate.opsForHash().get(redisKey(), docKey);
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private String redisKey() {
+        return REDIS_HASH_PREFIX + collectionName;
+    }
+
+    private String schemaVersionKey() {
+        return REDIS_SCHEMA_VERSION_KEY + collectionName;
+    }
+
+    private boolean shouldRebuildBeforeSync() {
+        Object current = redisTemplate.opsForValue().get(schemaVersionKey());
+        return !CURRENT_SCHEMA_VERSION.equals(String.valueOf(current));
+    }
+
+    private void markSchemaVersion() {
+        redisTemplate.opsForValue().set(schemaVersionKey(), CURRENT_SCHEMA_VERSION, 180, TimeUnit.DAYS);
+    }
+
     private List<Float> embedText(String text) {
         if (!StringUtils.hasText(text) || !StringUtils.hasText(qianwenApiKey)) {
             return List.of();
@@ -546,7 +806,7 @@ public class RagServiceImpl implements RagService {
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode embeddingNode = extractEmbeddingNode(root);
             if (embeddingNode == null || !embeddingNode.isArray()) {
-                log.warn("Embedding 响应格式不正确: {}", responseBody);
+                log.warn("Unexpected embedding response: {}", responseBody);
                 return List.of();
             }
 
@@ -554,10 +814,9 @@ public class RagServiceImpl implements RagService {
             for (JsonNode value : embeddingNode) {
                 embedding.add((float) value.asDouble());
             }
-
             return embedding;
         } catch (IOException | RestClientException e) {
-            log.warn("Embedding 调用失败: {}", e.getMessage());
+            log.warn("Embedding call failed: {}", e.getMessage());
             return List.of();
         }
     }
@@ -582,7 +841,6 @@ public class RagServiceImpl implements RagService {
         if (directEmbedding.isArray()) {
             return directEmbedding;
         }
-
         return null;
     }
 
@@ -608,10 +866,8 @@ public class RagServiceImpl implements RagService {
 
         Set<String> intersection = new HashSet<>(leftSet);
         intersection.retainAll(rightSet);
-
         Set<String> union = new HashSet<>(leftSet);
         union.addAll(rightSet);
-
         return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
     }
 
@@ -628,9 +884,7 @@ public class RagServiceImpl implements RagService {
         if (!StringUtils.hasText(value)) {
             return "";
         }
-        return value.toLowerCase()
-                .replaceAll("[\\p{P}\\p{S}\\s]+", "")
-                .trim();
+        return value.toLowerCase().replaceAll("[\\p{P}\\p{S}\\s]+", "").trim();
     }
 
     private String safeText(String value) {
@@ -639,6 +893,115 @@ public class RagServiceImpl implements RagService {
 
     private String asString(Object value) {
         return value == null ? "" : String.valueOf(value);
+    }
+
+    private String fingerprint(KnowledgeDocument doc) {
+        return fingerprintFromFields(
+                resolveDocKey(doc),
+                safeText(doc.title()),
+                safeText(doc.content()),
+                resolveSource(doc),
+                serializeMetadata(doc.metadata())
+        );
+    }
+
+    private String fingerprintFromFields(String docKey, String title, String content, String source, String metadata) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(safeText(docKey).getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            digest.update(safeText(title).getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            digest.update(safeText(content).getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            digest.update(safeText(source).getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            digest.update(safeText(metadata).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+
+    private String serializeMetadata(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return "{}";
+        }
+        Map<String, Object> ordered = new TreeMap<>(metadata);
+        try {
+            return objectMapper.writeValueAsString(ordered);
+        } catch (Exception e) {
+            return ordered.toString();
+        }
+    }
+
+    private String serializeMilvusMetadata(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return "{}";
+        }
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        putMetadataValue(summary, metadata, "source");
+        putMetadataValue(summary, metadata, "path");
+        putMetadataValue(summary, metadata, "sheet");
+        putMetadataValue(summary, metadata, "row");
+        putMetadataValue(summary, metadata, "level");
+        putMetadataValue(summary, metadata, "category");
+        putMetadataValue(summary, metadata, "region");
+        putMetadataValue(summary, metadata, "type");
+        putMetadataValue(summary, metadata, "tag");
+
+        if (summary.isEmpty()) {
+            return "{}";
+        }
+
+        try {
+            return objectMapper.writeValueAsString(summary);
+        } catch (Exception e) {
+            return summary.toString();
+        }
+    }
+
+    private void putMetadataValue(Map<String, Object> target, Map<String, Object> source, String key) {
+        Object value = source.get(key);
+        if (value == null) {
+            return;
+        }
+        String text = truncate(safeText(asString(value)), 512);
+        if (StringUtils.hasText(text)) {
+            target.put(key, text);
+        }
+    }
+
+    private Map<String, Object> parseMetadata(String metadataJson) {
+        if (!StringUtils.hasText(metadataJson)) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            return objectMapper.readValue(metadataJson, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            return new LinkedHashMap<>();
+        }
+    }
+
+    private String quote(String value) {
+        String escaped = safeText(value).replace("\\", "\\\\").replace("\"", "\\\"");
+        return "\"" + escaped + "\"";
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private Path resolveDatasetPath(String configuredPath) {
@@ -653,33 +1016,20 @@ public class RagServiceImpl implements RagService {
         for (Path candidate : candidates) {
             Path normalized = candidate.normalize();
             if (Files.exists(normalized)) {
-                log.info("RAG 知识库路径已解析为: {}", normalized.toAbsolutePath());
+                log.info("RAG dataset path resolved: {}", normalized.toAbsolutePath());
                 return normalized;
             }
         }
 
         Path fallback = Paths.get(configuredPath).normalize();
-        log.warn("未找到可用的 RAG 知识库路径，回退到配置值: {}", fallback.toAbsolutePath());
+        log.warn("No usable RAG dataset path found, fallback to: {}", fallback.toAbsolutePath());
         return fallback;
-    }
-
-    private String buildMilvusUri(String host, int port) {
-        if (!StringUtils.hasText(host)) {
-            return "http://127.0.0.1:" + port;
-        }
-
-        String normalized = host.trim();
-        if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
-            return normalized;
-        }
-        return "http://" + normalized + ":" + port;
     }
 
     private String resolveEmbeddingEndpoint(String baseUrl) {
         if (!StringUtils.hasText(baseUrl)) {
             return "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings";
         }
-
         String normalized = baseUrl.trim();
         if (normalized.endsWith("/")) {
             normalized = normalized.substring(0, normalized.length() - 1);
@@ -701,20 +1051,79 @@ public class RagServiceImpl implements RagService {
         return builder.toString().trim();
     }
 
+    private String resolveDocKey(KnowledgeDocument doc) {
+        String docKey = safeText(doc.id());
+        if (StringUtils.hasText(docKey)) {
+            return docKey;
+        }
+        docKey = safeText(doc.title());
+        if (StringUtils.hasText(docKey)) {
+            return docKey;
+        }
+        docKey = safeText(resolveSource(doc));
+        if (StringUtils.hasText(docKey)) {
+            return docKey;
+        }
+        return safeText(fingerprintFromFields("", safeText(doc.title()), safeText(doc.content()), resolveSource(doc), serializeMetadata(doc.metadata())));
+    }
+
     private String resolveSource(KnowledgeDocument doc) {
         String source = safeText(asString(doc.metadata().get("source")));
         if (StringUtils.hasText(source)) {
             return source;
         }
-
         source = safeText(asString(doc.metadata().get("path")));
         if (StringUtils.hasText(source)) {
             return source;
         }
-
         return safeText(doc.id());
     }
 
+    private boolean safeLoadCollection() {
+        try {
+            milvusClient.loadCollection(LoadCollectionParam.newBuilder()
+                    .withDatabaseName(milvusDatabase)
+                    .withCollectionName(collectionName)
+                    .build());
+            return true;
+        } catch (Exception e) {
+            log.warn("Milvus load failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean safeFlushAndLoad() {
+        try {
+            milvusClient.flush(FlushParam.newBuilder()
+                    .withDatabaseName(milvusDatabase)
+                    .withCollectionNames(List.of(collectionName))
+                    .withSyncFlush(Boolean.TRUE)
+                    .build());
+            return safeLoadCollection();
+        } catch (Exception e) {
+            log.warn("Milvus flush failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isCollectionAlreadyExists(Exception e) {
+        String message = e.getMessage();
+        return StringUtils.hasText(message)
+                && (message.contains("already exists") || message.contains("exist") || message.contains("Already exists"));
+    }
+
+    private boolean isDocKeyMissingError(Exception e) {
+        String message = e.getMessage();
+        return StringUtils.hasText(message)
+                && message.contains("field doc_key not exist");
+    }
+
     private record KnowledgeDocument(String id, String title, String content, Map<String, Object> metadata) {
+    }
+
+    private record SyncCandidate(KnowledgeDocument doc, String docKey, String fingerprint, List<Float> embedding) {
+    }
+
+    private record ExistingDocument(Long primaryId, String fingerprint) {
     }
 }

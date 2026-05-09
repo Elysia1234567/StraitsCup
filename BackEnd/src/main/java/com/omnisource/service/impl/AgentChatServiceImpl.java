@@ -80,6 +80,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         userMsg.setContent(content);
         userMsg.setImageUrl(imageUrl);
         userMsg.setSearchEnabled(searchEnabled ? 1 : 0);
+        userMsg.setFeedbackStatus(0);
         userMsg.setIsStream(0);
         userMsg.setCreateTime(LocalDateTime.now());
 
@@ -133,9 +134,10 @@ public class AgentChatServiceImpl implements AgentChatService {
 
         String finalText = executeStream(roomId, agent, streamId, messages);
         if (finalText != null) {
+            Map<String, Object> evidenceMetadata = buildEvidenceMetadata(retrievals, searchResult);
             ChatMessage agentMsg = saveAgentMessage(roomId, agent, streamId, finalText,
-                    searchResult != null || !retrievals.isEmpty());
-            broadcastAgentEnd(roomId, agent, streamId, agentMsg.getId(), finalText);
+                    searchResult != null || !retrievals.isEmpty(), evidenceMetadata);
+            broadcastAgentEnd(roomId, agent, streamId, agentMsg.getId(), finalText, evidenceMetadata);
             if (shouldSendSourceImage(userMessage)) {
                 broadcastSourceImage(roomId, agent);
             }
@@ -211,8 +213,8 @@ public class AgentChatServiceImpl implements AgentChatService {
 
         String finalText = executeStream(roomId, agent, streamId, messages);
         if (finalText != null) {
-            ChatMessage agentMsg = saveAgentMessage(roomId, agent, streamId, finalText, false);
-            broadcastAgentEnd(roomId, agent, streamId, agentMsg.getId(), finalText);
+            ChatMessage agentMsg = saveAgentMessage(roomId, agent, streamId, finalText, false, Map.of());
+            broadcastAgentEnd(roomId, agent, streamId, agentMsg.getId(), finalText, Map.of());
             int count = roomDiscussionCounters.get(roomId).incrementAndGet();
             maybeTriggerRelay(roomId, agent, finalText, freeDiscussion, count);
         }
@@ -420,7 +422,8 @@ public class AgentChatServiceImpl implements AgentChatService {
         return agents;
     }
 
-    private ChatMessage saveAgentMessage(Long roomId, Agent agent, String streamId, String content, boolean searchEnabled) {
+    private ChatMessage saveAgentMessage(Long roomId, Agent agent, String streamId, String content,
+                                          boolean searchEnabled, Map<String, Object> metadata) {
         ChatMessage msg = new ChatMessage();
         msg.setRoomId(roomId);
         msg.setMessageType("TEXT");
@@ -432,6 +435,14 @@ public class AgentChatServiceImpl implements AgentChatService {
         msg.setStreamId(streamId);
         msg.setIsStream(1);
         msg.setSearchEnabled(searchEnabled ? 1 : 0);
+        msg.setMetadata(writeMetadata(metadata));
+        Object webSearch = metadata == null ? null : metadata.get("webSearch");
+        if (webSearch instanceof Map<?, ?> webSearchMap && Boolean.TRUE.equals(webSearchMap.get("enabled"))) {
+            Map<String, Object> searchResults = new LinkedHashMap<>();
+            searchResults.put("webSearch", webSearchMap);
+            msg.setSearchResults(writeMetadata(searchResults));
+        }
+        msg.setFeedbackStatus(0);
         msg.setCreateTime(LocalDateTime.now());
         chatHistoryService.addMessage(msg);
         return msg;
@@ -482,7 +493,8 @@ public class AgentChatServiceImpl implements AgentChatService {
         sessionManager.broadcastToRoom(roomId, msg);
     }
 
-    private void broadcastAgentEnd(Long roomId, Agent agent, String streamId, Long messageId, String fullContent) {
+    private void broadcastAgentEnd(Long roomId, Agent agent, String streamId, Long messageId,
+                                   String fullContent, Map<String, Object> metadata) {
         WebSocketMessage msg = WebSocketMessage.builder()
                 .type(WebSocketMessage.MessageType.AGENT_END)
                 .senderType(WebSocketMessage.SenderType.AGENT)
@@ -493,9 +505,165 @@ public class AgentChatServiceImpl implements AgentChatService {
                 .streamId(streamId)
                 .messageId(messageId)
                 .content(fullContent)
+                .metadata(metadata == null || metadata.isEmpty() ? null : metadata)
                 .timestamp(LocalDateTime.now())
                 .build();
         sessionManager.broadcastToRoom(roomId, msg);
+    }
+
+    private Map<String, Object> buildEvidenceMetadata(List<RagRetrievalResponse> retrievals, String searchResult) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        List<Map<String, Object>> ragSources = buildRagSources(retrievals);
+        List<Map<String, Object>> webSources = buildWebSources(searchResult);
+
+        Map<String, Object> confidence = buildConfidence(ragSources, webSources);
+        metadata.put("confidence", confidence);
+
+        Map<String, Object> rag = new LinkedHashMap<>();
+        rag.put("enabled", retrievals != null && !retrievals.isEmpty());
+        rag.put("sources", ragSources);
+        metadata.put("rag", rag);
+
+        Map<String, Object> webSearch = new LinkedHashMap<>();
+        webSearch.put("enabled", searchResult != null && !searchResult.isBlank());
+        webSearch.put("summary", extractSearchSummary(searchResult));
+        webSearch.put("sources", webSources);
+        metadata.put("webSearch", webSearch);
+
+        return metadata;
+    }
+
+    private List<Map<String, Object>> buildRagSources(List<RagRetrievalResponse> retrievals) {
+        if (retrievals == null || retrievals.isEmpty()) {
+            return List.of();
+        }
+
+        List<Map<String, Object>> sources = new ArrayList<>();
+        for (RagRetrievalResponse item : retrievals) {
+            Map<String, Object> source = new LinkedHashMap<>();
+            source.put("id", item.getId());
+            source.put("title", item.getTitle());
+            source.put("score", item.getScore());
+            source.put("excerpt", truncate(item.getContent(), 180));
+            if (item.getMetadata() != null && !item.getMetadata().isEmpty()) {
+                source.put("metadata", item.getMetadata());
+                source.put("region", item.getMetadata().get("region"));
+                source.put("category", item.getMetadata().get("category"));
+                source.put("level", item.getMetadata().get("level"));
+            }
+            sources.add(source);
+        }
+        return sources;
+    }
+
+    private List<Map<String, Object>> buildWebSources(String searchResult) {
+        if (searchResult == null || searchResult.isBlank()
+                || searchResult.startsWith("[") && searchResult.endsWith("]")) {
+            return List.of();
+        }
+
+        List<Map<String, Object>> sources = new ArrayList<>();
+        String[] lines = searchResult.split("\\R");
+        Map<String, Object> current = null;
+        StringBuilder excerpt = new StringBuilder();
+        for (String rawLine : lines) {
+            String line = rawLine == null ? "" : rawLine.trim();
+            if (line.matches("^\\d+\\.\\s+.+")) {
+                if (current != null) {
+                    current.put("excerpt", truncate(excerpt.toString().trim(), 180));
+                    sources.add(current);
+                }
+                current = new LinkedHashMap<>();
+                current.put("title", line.replaceFirst("^\\d+\\.\\s+", ""));
+                excerpt = new StringBuilder();
+            } else if (line.startsWith("来源：") && current != null) {
+                current.put("url", line.substring("来源：".length()).trim());
+            } else if (!line.isBlank()
+                    && !line.equals("【联网搜索结果】")
+                    && !line.startsWith("搜索摘要：")
+                    && !line.equals("相关来源：")
+                    && current != null) {
+                if (!excerpt.isEmpty()) {
+                    excerpt.append(' ');
+                }
+                excerpt.append(line);
+            }
+        }
+        if (current != null) {
+            current.put("excerpt", truncate(excerpt.toString().trim(), 180));
+            sources.add(current);
+        }
+        return sources;
+    }
+
+    private Map<String, Object> buildConfidence(List<Map<String, Object>> ragSources, List<Map<String, Object>> webSources) {
+        double maxScore = 0.0;
+        for (Map<String, Object> source : ragSources) {
+            Object rawScore = source.get("score");
+            if (rawScore instanceof Number number) {
+                maxScore = Math.max(maxScore, number.doubleValue());
+            }
+        }
+
+        String level;
+        String reason;
+        if (ragSources.size() >= 3 && maxScore >= 0.70) {
+            level = "高";
+            reason = "RAG 命中多条资料且最高相似度较高";
+        } else if (!ragSources.isEmpty() || !webSources.isEmpty()) {
+            level = "中";
+            reason = !ragSources.isEmpty() ? "存在 RAG 资料支撑，但建议结合原始资料核验" : "使用联网搜索结果补充，建议核验网页来源";
+        } else {
+            level = "低";
+            reason = "未检索到明确 RAG 或网页来源";
+        }
+
+        Map<String, Object> confidence = new LinkedHashMap<>();
+        confidence.put("level", level);
+        confidence.put("score", maxScore);
+        confidence.put("reason", reason);
+        confidence.put("ragCount", ragSources.size());
+        confidence.put("webCount", webSources.size());
+        return confidence;
+    }
+
+    private String extractSearchSummary(String searchResult) {
+        if (searchResult == null || searchResult.isBlank()) {
+            return "";
+        }
+        for (String rawLine : searchResult.split("\\R")) {
+            String line = rawLine == null ? "" : rawLine.trim();
+            if (line.startsWith("搜索摘要：")) {
+                return truncate(line.substring("搜索摘要：".length()).trim(), 220);
+            }
+        }
+        if (searchResult.startsWith("[") && searchResult.endsWith("]")) {
+            return searchResult;
+        }
+        return "";
+    }
+
+    private String writeMetadata(Map<String, Object> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(metadata);
+        } catch (Exception e) {
+            log.warn("Failed to serialize chat evidence metadata: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = value.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= maxLength) {
+            return normalized;
+        }
+        return normalized.substring(0, maxLength) + "...";
     }
 
     private void broadcastAgentError(Long roomId, Agent agent, String streamId, String error) {
@@ -526,6 +694,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         msg.setImageUrl(sourceImageUrl);
         msg.setIsStream(0);
         msg.setSearchEnabled(0);
+        msg.setFeedbackStatus(0);
         msg.setCreateTime(LocalDateTime.now());
         chatHistoryService.addMessage(msg);
 
