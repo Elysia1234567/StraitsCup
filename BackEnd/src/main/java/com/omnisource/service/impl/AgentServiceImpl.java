@@ -22,8 +22,17 @@ public class AgentServiceImpl implements AgentService {
 
     @PostConstruct
     public void syncCityAgents() {
-        FujianCulturalAgentRegistry.DEFINITIONS.forEach(this::upsertAgentDefinition);
-        log.info("Synced {} Fujian city agents", FujianCulturalAgentRegistry.DEFINITIONS.size());
+        int success = 0;
+        for (AgentDefinition definition : FujianCulturalAgentRegistry.DEFINITIONS) {
+            try {
+                upsertAgentDefinition(definition);
+                success++;
+            } catch (Exception e) {
+                log.error("Failed to sync Fujian city agent: agentCode={}, name={}, reason={}",
+                        definition.getAgentCode(), definition.getName(), e.getMessage(), e);
+            }
+        }
+        log.info("Synced {}/{} Fujian city agents", success, FujianCulturalAgentRegistry.DEFINITIONS.size());
     }
 
     @Override

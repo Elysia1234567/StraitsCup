@@ -2,7 +2,19 @@ import { ref, shallowRef, onUnmounted } from 'vue';
 import * as chatApi from '@/api/chatApi.js';
 import { toAgentViewModel } from '@/utils/agentAssets.js';
 
+function parseMetadata(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 function mapHistoryMessage(m) {
+  const metadata = parseMetadata(m.metadata);
   const base = {
     id: m.id,
     messageId: m.id,
@@ -15,6 +27,8 @@ function mapHistoryMessage(m) {
     messageType: m.messageType,
     feedbackStatus: m.feedbackStatus ?? 0,
     feedbackTime: m.feedbackTime ?? null,
+    metadata,
+    searchResults: parseMetadata(m.searchResults),
     streaming: false,
   };
   if (m.senderType === 'USER') {
@@ -132,6 +146,7 @@ export function useMultiAgentChat() {
           streaming: true,
           messageType: 'TEXT',
           feedbackStatus: 0,
+          metadata: msg.metadata || null,
         });
         streamIndex.set(msg.streamId, messages.value.length - 1);
         break;
@@ -154,6 +169,7 @@ export function useMultiAgentChat() {
           row.streaming = false;
           row.messageId = msg.messageId;
           row.id = msg.messageId;
+          row.metadata = msg.metadata || row.metadata || null;
         }
         streamIndex.delete(msg.streamId);
         break;
@@ -171,6 +187,7 @@ export function useMultiAgentChat() {
             imageUrl: msg.imageUrl,
             messageType: 'IMAGE',
             feedbackStatus: 0,
+            metadata: msg.metadata || null,
             streaming: false,
           });
         }
