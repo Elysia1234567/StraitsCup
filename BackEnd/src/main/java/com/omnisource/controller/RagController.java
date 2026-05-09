@@ -34,7 +34,7 @@ public class RagController {
         ragService.reload();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("ready", ragService.isReady());
-        data.put("message", "RAG 知识库已重建");
+        data.put("message", "RAG 知识库已增量同步");
         return Result.success(data);
     }
 

@@ -99,3 +99,13 @@ chat:
   agent:
     cooldown-seconds: 30
     max-responders: 3
+  multi-agent:
+    agent-timeout-seconds: ${CHAT_MULTI_AGENT_TIMEOUT_SECONDS:20}
+    session-ttl-days: ${CHAT_MULTI_AGENT_SESSION_TTL_DAYS:7}
+
+rag:
+  dataset-path: ${RAG_DATASET_PATH:Util/standardList.jsonl}
+  default-top-k: ${RAG_DEFAULT_TOP_K:3}
+  collection-name: ${RAG_COLLECTION_NAME:omnisource_rag}
+  sync-fixed-delay-ms: ${RAG_SYNC_FIXED_DELAY_MS:3600000}
+  sync-initial-delay-ms: ${RAG_SYNC_INITIAL_DELAY_MS:10000}

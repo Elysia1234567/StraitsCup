@@ -23,4 +23,7 @@ public class MultiAgentChatResponse {
     private List<AgentReplyResponse> agentReplies;
     private List<RagRetrievalResponse> retrievals;
     private String webSearchResult;
+    private List<AgentTraceResponse> evidenceChain;
+    private ConflictInsightResponse conflictInsight;
+    private ConfidenceAssessmentResponse confidenceAssessment;
 }

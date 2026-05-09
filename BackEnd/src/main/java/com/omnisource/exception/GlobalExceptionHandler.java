@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.Set;
@@ -127,6 +128,15 @@ public class GlobalExceptionHandler {
             NoHandlerFoundException e,
             HttpServletRequest request) {
         log.warn("No handler found [{}] {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+        return Result.error(CommonErrorCode.NOT_FOUND.getCode(), "API not found");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Result<Void> handleNoResourceFoundException(
+            NoResourceFoundException e,
+            HttpServletRequest request) {
+        log.warn("No resource found [{}] {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
         return Result.error(CommonErrorCode.NOT_FOUND.getCode(), "API not found");
     }
 
