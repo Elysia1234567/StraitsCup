@@ -29,6 +29,12 @@ public interface ChatMessageMapper {
     @Update("UPDATE chat_message SET content = #{content} WHERE id = #{id}")
     int updateContent(@Param("id") Long id, @Param("content") String content);
 
+    @Update("UPDATE chat_message SET feedback_status = #{feedbackStatus}, feedback_time = NOW(), update_time = NOW() " +
+            "WHERE id = #{messageId} AND room_id = #{roomId}")
+    int updateFeedback(@Param("roomId") Long roomId,
+                       @Param("messageId") Long messageId,
+                       @Param("feedbackStatus") Integer feedbackStatus);
+
     @Update("UPDATE chat_message SET is_deleted = 1 WHERE room_id = #{roomId}")
     int deleteByRoomId(Long roomId);
 }

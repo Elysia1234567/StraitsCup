@@ -13,6 +13,8 @@ function mapHistoryMessage(m) {
     content: m.content ?? '',
     imageUrl: m.imageUrl,
     messageType: m.messageType,
+    feedbackStatus: m.feedbackStatus ?? 0,
+    feedbackTime: m.feedbackTime ?? null,
     streaming: false,
   };
   if (m.senderType === 'USER') {
@@ -114,6 +116,7 @@ export function useMultiAgentChat() {
             content: msg.content || '',
             imageUrl: msg.imageUrl,
             messageType: msg.messageType || 'TEXT',
+            feedbackStatus: 0,
           });
         }
         break;
@@ -128,6 +131,7 @@ export function useMultiAgentChat() {
           content: '',
           streaming: true,
           messageType: 'TEXT',
+          feedbackStatus: 0,
         });
         streamIndex.set(msg.streamId, messages.value.length - 1);
         break;
@@ -166,6 +170,7 @@ export function useMultiAgentChat() {
             content: msg.content || '',
             imageUrl: msg.imageUrl,
             messageType: 'IMAGE',
+            feedbackStatus: 0,
             streaming: false,
           });
         }

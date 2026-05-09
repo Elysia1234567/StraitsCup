@@ -11,4 +11,5 @@ public interface ChatHistoryService {
     void clearHistory(Long roomId);
     List<ChatMessage> getContextForAI(Long roomId, int limit);
     void updateMessageContent(Long messageId, String content);
+    void updateMessageFeedback(Long roomId, Long messageId, Integer feedbackStatus);
 }

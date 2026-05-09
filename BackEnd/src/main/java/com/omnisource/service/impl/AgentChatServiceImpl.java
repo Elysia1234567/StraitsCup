@@ -80,6 +80,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         userMsg.setContent(content);
         userMsg.setImageUrl(imageUrl);
         userMsg.setSearchEnabled(searchEnabled ? 1 : 0);
+        userMsg.setFeedbackStatus(0);
         userMsg.setIsStream(0);
         userMsg.setCreateTime(LocalDateTime.now());
 
@@ -432,6 +433,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         msg.setStreamId(streamId);
         msg.setIsStream(1);
         msg.setSearchEnabled(searchEnabled ? 1 : 0);
+        msg.setFeedbackStatus(0);
         msg.setCreateTime(LocalDateTime.now());
         chatHistoryService.addMessage(msg);
         return msg;
@@ -526,6 +528,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         msg.setImageUrl(sourceImageUrl);
         msg.setIsStream(0);
         msg.setSearchEnabled(0);
+        msg.setFeedbackStatus(0);
         msg.setCreateTime(LocalDateTime.now());
         chatHistoryService.addMessage(msg);
 

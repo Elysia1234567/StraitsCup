@@ -22,9 +22,8 @@ public class AgentPromptBuilder {
     private static final String NO_RAG_CN_MARK = "NO_RAG_CN";
 
     public boolean shouldSkipRag(Agent agent) {
-        return containsNoRagMark(agent.getPromptTemplate())
-                || containsNoRagMark(agent.getConstraints())
-                || containsNoRagMark(agent.getKnowledgeScope());
+        // All agents now go through RAG; legacy markers are sanitized out of prompts.
+        return false;
     }
 
     public String buildAgentPrompt(
@@ -79,11 +78,11 @@ public class AgentPromptBuilder {
                 4. Keep it concise and grounded.
                 5. End with a short reference note like "参考片段: chunkId1, chunkId2".
                 """.formatted(
-                agent.buildSystemPrompt(theme),
-                nullToDefault(agent.getPersonality(), "calm, friendly, and historically grounded"),
-                nullToDefault(agent.getKnowledgeScope(), "heritage history, craft, aesthetics, and cultural background"),
-                nullToDefault(agent.getLanguageStyle(), "clear, warm, and vivid"),
-                nullToDefault(agent.getConstraints(), "do not fabricate facts; do not overstate conclusions"),
+                sanitizePromptText(agent.buildSystemPrompt(theme)),
+                sanitizePromptText(nullToDefault(agent.getPersonality(), "calm, friendly, and historically grounded")),
+                sanitizePromptText(nullToDefault(agent.getKnowledgeScope(), "heritage history, craft, aesthetics, and cultural background")),
+                sanitizePromptText(nullToDefault(agent.getLanguageStyle(), "clear, warm, and vivid")),
+                sanitizePromptText(nullToDefault(agent.getConstraints(), "do not fabricate facts; do not overstate conclusions")),
                 theme,
                 request.getQuery(),
                 references,
@@ -110,10 +109,10 @@ public class AgentPromptBuilder {
                 [Constraints]
                 %s
                 """.formatted(
-                agent.buildSystemPrompt(theme),
+                sanitizePromptText(agent.buildSystemPrompt(theme)),
                 theme,
                 request.getQuery(),
-                nullToDefault(agent.getConstraints(), "follow the role template strictly")
+                sanitizePromptText(nullToDefault(agent.getConstraints(), "follow the role template strictly"))
         );
     }
 
@@ -217,6 +216,17 @@ public class AgentPromptBuilder {
 
     private String nullToDefault(String value, String defaultValue) {
         return StringUtils.hasText(value) ? value : defaultValue;
+    }
+
+    private String sanitizePromptText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return value
+                .replace(NO_RAG_MARK, "")
+                .replace(NO_RAG_CN_MARK, "")
+                .replaceAll("^[\\s；;、,，]+", "")
+                .trim();
     }
 
     private boolean containsNoRagMark(String value) {

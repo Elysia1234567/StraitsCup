@@ -87,7 +87,8 @@ public class RagServiceImpl implements RagService {
     private final Path datasetPath;
     private final int defaultTopK;
     private final String collectionName;
-    private final String milvusUri;
+    private final String milvusHost;
+    private final int milvusPort;
     private final String milvusDatabase;
     private final String milvusUsername;
     private final String milvusPassword;
@@ -121,7 +122,8 @@ public class RagServiceImpl implements RagService {
         this.datasetPath = resolveDatasetPath(datasetPath);
         this.defaultTopK = defaultTopK;
         this.collectionName = collectionName;
-        this.milvusUri = buildMilvusUri(milvusHost, milvusPort);
+        this.milvusHost = StringUtils.hasText(milvusHost) ? milvusHost.trim() : "127.0.0.1";
+        this.milvusPort = milvusPort > 0 ? milvusPort : 19530;
         this.milvusDatabase = StringUtils.hasText(milvusDatabase) ? milvusDatabase : "default";
         this.milvusUsername = milvusUsername;
         this.milvusPassword = milvusPassword;
@@ -133,7 +135,12 @@ public class RagServiceImpl implements RagService {
 
     @PostConstruct
     public void init() {
-        refreshAndSync();
+        try {
+            refreshAndSync();
+        } catch (Exception e) {
+            milvusReady = false;
+            log.warn("RAG init skipped, falling back to local retrieval only: {}", e.getMessage(), e);
+        }
     }
 
     @Scheduled(
@@ -141,12 +148,22 @@ public class RagServiceImpl implements RagService {
             initialDelayString = "${rag.sync-initial-delay-ms:10000}"
     )
     public void scheduledSync() {
-        refreshAndSync();
+        try {
+            refreshAndSync();
+        } catch (Exception e) {
+            milvusReady = false;
+            log.warn("RAG scheduled sync failed, keeping local retrieval only: {}", e.getMessage(), e);
+        }
     }
 
     @Override
     public synchronized void reload() {
-        refreshAndSync();
+        try {
+            refreshAndSync();
+        } catch (Exception e) {
+            milvusReady = false;
+            log.warn("RAG reload failed, keeping local retrieval only: {}", e.getMessage(), e);
+        }
     }
 
     @Override
@@ -376,7 +393,8 @@ public class RagServiceImpl implements RagService {
     private void initializeMilvusClient() {
         try {
             ConnectParam.Builder builder = ConnectParam.newBuilder()
-                    .withUri(milvusUri)
+                    .withHost(milvusHost)
+                    .withPort(milvusPort)
                     .withDatabaseName(milvusDatabase);
 
             if (StringUtils.hasText(milvusUsername) && StringUtils.hasText(milvusPassword)) {
@@ -386,7 +404,7 @@ public class RagServiceImpl implements RagService {
             }
 
             milvusClient = new MilvusServiceClient(builder.build());
-            log.info("Milvus client ready: uri={}, db={}", milvusUri, milvusDatabase);
+            log.info("Milvus client ready: host={}, port={}, db={}", milvusHost, milvusPort, milvusDatabase);
         } catch (RuntimeException e) {
             milvusClient = null;
             log.warn("Milvus client init failed: {}", e.getMessage(), e);
@@ -1006,17 +1024,6 @@ public class RagServiceImpl implements RagService {
         Path fallback = Paths.get(configuredPath).normalize();
         log.warn("No usable RAG dataset path found, fallback to: {}", fallback.toAbsolutePath());
         return fallback;
-    }
-
-    private String buildMilvusUri(String host, int port) {
-        if (!StringUtils.hasText(host)) {
-            return "http://127.0.0.1:" + port;
-        }
-        String normalized = host.trim();
-        if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
-            return normalized;
-        }
-        return "http://" + normalized + ":" + port;
     }
 
     private String resolveEmbeddingEndpoint(String baseUrl) {

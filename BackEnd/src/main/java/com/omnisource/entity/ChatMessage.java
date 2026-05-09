@@ -21,6 +21,8 @@ public class ChatMessage {
     private String streamId;
     private Integer searchEnabled;
     private String searchResults;
+    private Integer feedbackStatus;
+    private LocalDateTime feedbackTime;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private Integer isDeleted;

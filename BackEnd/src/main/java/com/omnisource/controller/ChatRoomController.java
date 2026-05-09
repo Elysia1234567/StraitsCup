@@ -116,4 +116,23 @@ public class ChatRoomController {
             @RequestParam(defaultValue = "50") int limit) {
         return Result.success(chatHistoryService.getRecentHistory(roomId, limit));
     }
+
+    @PutMapping("/{roomId}/messages/{messageId}/feedback")
+    public Result<Void> updateMessageFeedback(
+            @PathVariable Long roomId,
+            @PathVariable Long messageId,
+            @RequestBody Map<String, Object> request) {
+        Object raw = request.get("feedbackStatus");
+        Integer feedbackStatus;
+        try {
+            feedbackStatus = raw == null ? null : Integer.valueOf(raw.toString());
+        } catch (NumberFormatException e) {
+            return Result.badRequest("feedbackStatus 只能是 -1、0 或 1");
+        }
+        if (feedbackStatus == null || (feedbackStatus != 1 && feedbackStatus != -1 && feedbackStatus != 0)) {
+            return Result.badRequest("feedbackStatus 只能是 -1、0 或 1");
+        }
+        chatHistoryService.updateMessageFeedback(roomId, messageId, feedbackStatus);
+        return Result.success();
+    }
 }

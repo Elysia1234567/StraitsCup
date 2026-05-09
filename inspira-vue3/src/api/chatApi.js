@@ -52,6 +52,13 @@ export function deleteRoom(roomId) {
   return apiFetch(`/api/chat-rooms/${roomId}`, { method: 'DELETE' });
 }
 
+export function updateMessageFeedback(roomId, messageId, feedbackStatus) {
+  return apiFetch(`/api/chat-rooms/${roomId}/messages/${messageId}/feedback`, {
+    method: 'PUT',
+    body: JSON.stringify({ feedbackStatus }),
+  });
+}
+
 export function generateAgentImage(payload) {
   return apiFetch('/api/aigc/image', {
     method: 'POST',

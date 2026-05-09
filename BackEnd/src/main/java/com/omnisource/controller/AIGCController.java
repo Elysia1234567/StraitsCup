@@ -142,6 +142,7 @@ public class AIGCController {
         msg.setImageUrl(imageUrl);
         msg.setIsStream(0);
         msg.setSearchEnabled(0);
+        msg.setFeedbackStatus(0);
         msg.setCreateTime(LocalDateTime.now());
         chatHistoryService.addMessage(msg);
         return msg;
