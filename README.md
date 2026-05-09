@@ -1,254 +1,202 @@
-# 🌸 同源 —— 基于多智能体与AIGC的非遗文化数字生命共创平台
+# 同源 OmniSource
 
-> **让千年非遗"活"起来，用AI连接两岸四地的文化血脉**  
-> *From Static Heritage to Digital Life*
+基于多智能体与 AIGC 的非遗文化数字生命共创平台。
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Vue3](https://img.shields.io/badge/Vue-3.x-brightgreen?logo=vue.js&logoColor=white)](https://vuejs.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-green?logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
-[![AIGC](https://img.shields.io/badge/AIGC-Enabled-orange)](https://en.wikipedia.org/wiki/Generative_AI)
-[![Multi-Agent](https://img.shields.io/badge/Multi--Agent-Architecture-purple)](#核心创新)
+OmniSource 面向福建九地市非遗文化展示、问答、共创和沉浸式浏览场景，将非遗项目组织为可对话、可协作、可生成图像、可进入 3D/WebGL 展示空间的文化 Agent。项目当前包含 Spring Boot 后端、Vue 3 展示端、UniApp 移动端，以及比赛说明书和展示材料。
 
----
+## Core Features
 
-## 🏛️ 项目概述
+- **多智能体非遗群聊**：用户可创建聊天室，选择最多 6 个文化 Agent。后端根据知识范围、冷却时间和上下文选择 1-3 个 Agent 回复。
+- **RAG 事实增强**：默认读取 `Util/standardList.jsonl`，优先使用 Milvus 向量检索，失败时回退到本地相似度检索，降低文化问答幻觉。
+- **AIGC 图像共创**：支持绑定指定 Agent 生图，自动结合 Agent 人设、原型图和用户描述生成图片，并写入聊天室历史。
+- **WebSocket 流式体验**：聊天室通过 `/ws/chat` 推送 `AGENT_START`、`AGENT_CHUNK`、`AGENT_END`、`IMAGE` 等事件。
+- **联网搜索补充**：多 Agent 问答支持 Tavily 搜索开关，用于补充 RAG 资料之外的信息。
+- **语音识别通道**：`/ws/voice` 支持普通话和闽南语参数，基于 DashScope Fun-ASR 实时返回识别文本。
+- **沉浸式前端**：Vue 3 前端包含福建地图入口、非遗画廊、Agent 聊天室、AIGC 生图面板、OGL 无限画廊和 Three.js 模型展示。
+- **小程序端原型**：UniApp 端提供首页、画廊、聊天和 Agent 页面，用于移动端展示。
 
-**"同源"** 是一个融合 **多智能体（Multi-Agent）系统** 与 **生成式人工智能（AIGC）** 的非遗文化数字生命共创平台。我们聚焦 **海峡两岸及港澳地区** 共享的非遗瑰宝（如皮影、蜀绣、剪纸、木偶戏等），通过构建可交互、可对话、可创作的"**数字传承人**"，将静态文化遗产转化为具有生命力的 **数字生命体**。
+## Repository Structure
 
-> 🎯 **核心理念**：不是博物馆里的标本，而是会说话、会创作、会传承的数字生命
-
----
-
-## 🎯 选题背景
-
-### 文化同源，传承断代
-- 海峡两岸及港澳地区拥有深厚的历史文化底蕴，共享大量珍贵的非物质文化遗产
-- 然而，随着时代变迁，许多非遗技艺面临 **传承断代、受众萎缩、表达僵化** 的严峻挑战
-- 传统的数字化展示方式（图片、视频、文字）缺乏 **互动性、沉浸感与共创机制**
-
-### 技术赋能，文化新生
-- 本项目运用 **多智能体系统** 与 **AIGC技术**，让非遗文化从静态展示转变为可交互的"数字生命"
-- 通过AI技术激活传统文化的当代价值，强化两岸四地青年的 **文化认同与情感纽带**
-
----
-
-## 💡 核心创新
-
-### 🤖 应用创新：数字传承人多智能体协同系统
-
-| 角色 | 功能定位 | 交互特点 |
-|------|----------|----------|
-| **历史学家Agent** | 提供严谨史实与文献依据 | 基于RAG检索真实史料 |
-| **匠人Agent** | 模拟真实工艺逻辑与创作思维 | 解释制作工艺与技巧 |
-| **游客Agent** | 代表大众视角，提出通俗问题 | 拉近文化距离 |
-
-- 所有Agent基于 **RAG（检索增强生成）** 构建，知识源自权威非遗数据库
-- 智能体之间可 **自主讨论、辩论、协作**，用户可随时 **插入对话、引导话题**
-- 形成 **动态文化叙事网络**，而非单向问答
-
-### 🎨 技术创新：AIGC × Web3D 融合引擎
-
-- **文生图**：用户输入文字 → AIGC自动生成非遗风格艺术作品（剪纸、水墨、年画、刺绣等）
-- **3D场景生成**：AI辅助生成Three.js代码，在浏览器中构建轻量级虚拟展馆
-- **实时渲染**：支持生成过程可视化动效与交互体验
-- **方言语音**：集成TTS引擎，支持闽南语、粤语、客家话等方言播报
-
----
-
-## 🛠️ 技术架构
-
-```mermaid
-graph TB
-    subgraph "前端 (Vue3)"
-        A[Vue3 UI] --> B[WebSocket Client]
-        B --> C[Three.js 3D Canvas]
-        C --> D[语音播放器]
-    end
-    
-    subgraph "后端 (Spring Boot 3)"
-        E[Controller层] --> F[Agent调度器]
-        F --> G[多Agent集群]
-        G --> H[RAG知识库]
-        H --> I[向量数据库]
-        F --> J[AIGC服务]
-        J --> K[文生图模型]
-        K --> L[3D代码生成]
-    end
-    
-    subgraph "中间件"
-        M[Redis MQ] --> N[异步任务队列]
-        O[Milvus] --> P[向量存储检索]
-    end
-    
-    A -.-> M
-    E -.-> M
-    H -.-> O
+```text
+.
+├─ BackEnd/                         # Spring Boot 3 backend
+│  ├─ API/                          # Backend API docs
+│  ├─ src/main/java/com/omnisource
+│  │  ├─ controller/                # REST API controllers
+│  │  ├─ service/                   # Service interfaces and orchestration
+│  │  ├─ service/impl/              # Business implementations
+│  │  ├─ service/mcp/               # MCP-style tool implementations
+│  │  ├─ Agents/                    # Fujian cultural agent definitions
+│  │  ├─ websocket/                 # Chat and voice WebSocket handlers
+│  │  ├─ mapper/                    # MyBatis mappers
+│  │  ├─ entity/                    # Database entities
+│  │  ├─ dto/                       # Request and response DTOs
+│  │  └─ exception/                 # Unified exception handling
+│  └─ src/main/resources
+│     ├─ application.yml            # Main runtime configuration
+│     └─ db/                        # Schema and seed SQL
+├─ inspira-vue3/                    # Vue 3 + Vite demo frontend
+├─ uniapp/tongyuan/                 # UniApp mobile client
+├─ Util/                            # Scraping, cleaning, import scripts and JSONL dataset
+├─ 01_作品简介一页/                 # Competition one-page introduction material
+├─ 02_作品设计说明书_署名版/        # Signed design document material
+└─ 03_作品设计说明书_匿名版/        # Anonymous design document material
 ```
 
-### 后端技术栈
-- **Spring Boot 3**: 微服务框架
-- **Spring AI**: AIGC模型集成
-- **RAG系统**: 检索增强生成，确保回答准确性
-- **Redis**: 消息队列 + 缓存 + 任务状态管理
-- **Milvus**: 向量数据库，存储非遗文献向量
-- **WebSocket**: 实时双向通信
+## Tech Stack
 
-### 前端技术栈
-- **Vue 3**: 渐进式JavaScript框架
-- **Three.js**: 3D图形渲染
-- **Pinia**: 状态管理
-- **Vite**: 构建工具
-- **WebSocket**: 实时流式响应
+| Layer | Stack |
+| --- | --- |
+| Backend | Java 17, Spring Boot 3.3.6, Spring AI 1.0.0-M6 |
+| Data | MySQL, MyBatis, Redis |
+| Vector Retrieval | Milvus Java SDK, Qwen/DashScope embedding API, local fallback retrieval |
+| AI | OpenAI-compatible Qwen chat model, Qwen image generation, multimodal image understanding |
+| Realtime | WebSocket, SSE, DashScope Fun-ASR |
+| Storage | Aliyun OSS |
+| Frontend | Vue 3, Vite, Tailwind CSS, ECharts, OGL, Three.js, GSAP |
+| Mobile | UniApp |
 
----
+## Backend Quick Start
 
-## 🎥 核心功能演示
+Prerequisites:
 
-### 📝 文字转非遗艺术
-```javascript
-// 用户输入："福建惠安女服饰"
-// 系统输出：自动生成惠安女风格数字画作
-const userInput = "福建惠安女服饰";
-const generatedArtwork = await aigc.generate(userInput, { style: "traditional_fujian" });
+- JDK 17
+- Maven
+- MySQL
+- Redis
+- Milvus, optional but recommended for vector retrieval
+- DashScope/Qwen API key
+- Aliyun OSS credentials if using image upload or image generation archive
+
+Create a local `.env` in the repository root or `BackEnd/`. `application.yml` imports both locations.
+
+```properties
+DB_URL=jdbc:mysql://127.0.0.1:3306/omni-source?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+DB_USERNAME=root
+DB_PASSWORD=your_password
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DATABASE=0
+
+QIANWEN_API_KEY=your_qwen_key
+QIANWEN_MODEL=qwen3.5-plus
+QIANWEN_IMAGE_MODEL=qwen-image-2.0-pro
+
+MILVUS_HOST=127.0.0.1
+MILVUS_PORT=19530
+MILVUS_DATABASE=default
+
+ALIYUN_OSS_ENDPOINT=oss-cn-beijing.aliyuncs.com
+ALIYUN_OSS_ACCESS_KEY_ID=your_oss_key_id
+ALIYUN_OSS_ACCESS_KEY_SECRET=your_oss_key_secret
+ALIYUN_OSS_BUCKET_NAME=your_bucket
+ALIYUN_OSS_PUBLIC_BASE_URL=https://your_bucket.oss-cn-beijing.aliyuncs.com
+
+TAVILY_API_KEY=your_tavily_key
+DASHSCOPE_API_KEY=your_dashscope_key
 ```
 
-### 👥 多Agent群聊
-```
-历史学家: "惠安女服饰始于明代，特色在于头饰与服饰色彩..."
-匠人: "确实，她们的头巾编织技法独特，采用特殊针法..."
-游客: "哇，这头饰好漂亮！能介绍一下制作工艺吗？"
-用户: "这个头饰有什么特殊含义吗？"
-```
+Start backend:
 
-### 🏛️ 3D虚拟展馆
-- 自动加载生成的艺术品到3D场景
-- 支持旋转、缩放、点击交互
-- 数字传承人实体化展示
-
----
-
-## 🚀 快速开始
-
-### 环境准备
 ```bash
-# 前置依赖
-node --version >= 18.0.0
-java --version >= 17
-docker --version >= 20.0.0
+cd BackEnd
+mvn spring-boot:run
 ```
 
-### 后端启动
+Run tests:
+
 ```bash
-# 克隆项目
-git clone https://github.com/your-repo/tongyuan.git
-cd tongyuan/backend
-
-# 启动Redis和Milvus
-docker-compose up -d
-
-# 启动Spring Boot应用
-./mvnw spring-boot:run
+cd BackEnd
+mvn test
 ```
 
-### 前端启动
+Build:
+
 ```bash
-cd ../frontend
+cd BackEnd
+mvn clean package
+```
+
+Backend defaults to port `8081`.
+
+## Frontend Quick Start
+
+### Vue 3 Web Frontend
+
+```bash
+cd inspira-vue3
 npm install
 npm run dev
 ```
 
-### API接口示例
-```bash
-# 生成非遗艺术作品
-POST /api/aigc/generate
-{
-  "text": "台湾布袋戏",
-  "style": "traditional_taiwan",
-  "dimension": 512
-}
+Main views:
 
-# 获取Agent对话
-GET /api/agents/conversation?topic=taiwan_puppetry
+- Home page: Fujian map and non-heritage gallery.
+- Agent page: chat rooms, Agent selection, WebSocket streaming chat, image generation.
+- Infinite grid page: OGL/WebGL image gallery.
+- Data page: Three.js model viewer.
+
+### UniApp Client
+
+```bash
+cd uniapp/tongyuan
+npm install
+npm run dev:h5
 ```
 
----
+For real-device testing, configure the API base URL as a LAN-accessible backend address instead of `localhost`.
 
-## 📊 项目亮点
+## Dataset and Import Tools
 
-| 维度 | 描述 | 分值 |
-|------|------|------|
-| **选题背景** | 聚焦两岸四地文化同源，解决非遗传承难题 | 10/10 |
-| **应用创新** | 多Agent协同，数字传承人对话系统 | 20/20 |
-| **技术难度** | 异步架构、RAG、AIGC集成 | 35/35 |
-| **展示效果** | 实时生成、3D展示、方言讲解 | 20/20 |
-| **文化价值** | 强化文化认同与情感纽带 | ∞ |
+`Util/standardList.jsonl` is the default RAG dataset. `RagServiceImpl` loads this file on startup, syncs to Milvus when available, and keeps local fallback retrieval ready for demos.
 
----
+Useful scripts:
 
-## 🎭 答辩场景预演
-
-> **评委**: "请展示一下您家乡的非遗项目"
-
-**系统演示流程**:
-1. 📝 用户输入: "广东醒狮"
-2. ⚡ **3秒内** 生成醒狮风格数字画作
-3. 🏯 自动加载至3D虚拟武馆场景
-4. 🦁 数字传承人现身，用粤语解说:
-   > "我哋广东醒狮，有千几千年历史喇，寓意驱邪纳福..."
-5. 👥 后台Agent群聊开启，用户可参与讨论
-
----
-
-## 🤝 贡献指南
-
-我们欢迎对 **非遗保护、AIGC、多智能体系统** 感兴趣的开发者、研究者、文化工作者加入！
-
-### 开发贡献
 ```bash
-# Fork 项目
-# 创建特性分支
-git checkout -b feature/awesome-feature
-# 提交更改
-git commit -m 'Add awesome feature'
-# 推送分支
-git push origin feature/awesome-feature
-# 创建 Pull Request
+pip install -r requirements.txt
+python Util/import_standard_list.py
+python Util/SearchList.py
 ```
 
-### 数据贡献
-- 补充各地区非遗项目数据集
-- 提供非遗相关的文本、图像、音频资料
-- 翻译非遗术语的方言版本
+## API Documentation
 
----
+Backend API documentation is in [BackEnd/API/README.md](BackEnd/API/README.md).
 
-## 📄 许可证
+Important endpoints:
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+- `POST /api/chat`: one-shot multi-agent Q&A.
+- `GET /api/agents`: list enabled heritage agents.
+- `POST /api/chat-rooms`: create a persistent chat room.
+- `WS /ws/chat?roomId={roomId}`: realtime room chat.
+- `POST /api/aigc/image`: generate an image and optionally broadcast it into a room.
+- `GET /api/rag/retrieve`: debug RAG retrieval.
+- `GET /api/system-profile`: structured technical profile for demos.
 
----
+## Demo Flow
 
-## ❤️ 致谢
+1. Open the Vue homepage and click a city on the Fujian map.
+2. Show the linked non-heritage gallery cards and flip-card descriptions.
+3. Enter the Agent page and create a room with 2-3 cultural Agent roles.
+4. Ask a question such as `你们一起介绍一下寿山石雕的历史和工艺特点`.
+5. Toggle web search only when you need external supplementation.
+6. Show streamed multi-agent replies and the persisted chat history.
+7. Generate an Agent image from a prompt and show it entering the room as an image message.
+8. Open the infinite gallery or 3D model page for visual presentation.
+9. Use `/api/system-profile` or the API docs to explain backend architecture during defense.
 
-- **非遗传承人与文化机构** 提供的宝贵资料
-- **开源社区**：Spring AI、Vue、Three.js、Milvus、Redis
-- **所有关注传统文化数字化未来** 的朋友们
+## Engineering Notes
 
----
+- Current chat room APIs use local user `userId = 1`; formal login/auth is not yet connected.
+- `StreamWebSocketHandler` exists as a placeholder, but only `/ws/chat` and `/ws/voice` are registered.
+- RAG remains usable without Milvus because local retrieval fallback is built in.
+- Keep real keys, passwords, server IPs, and OSS credentials in `.env` or `application-local.yml`; do not commit them.
+- The repository includes competition material folders. Anonymous submissions must be checked to ensure no school, author, teacher, or metadata identity information leaks.
 
-## 🌟 项目愿景
+## Competition Highlights
 
-> **"同源者，非仅血脉之同，乃文化之共传承也"**
-
-以AI为舟，载非遗渡数字之海，连两岸四地之心。  
-让千年文化在数字时代焕发新生，让每一个年轻人都能成为非遗文化的守护者与传承者。
-
----
-
-<div align="center">
-
-### 🌸 **Star this repo if you believe in the future of living heritage!** 🌸
-
-*同源 · 同心 · 共创数字文化新纪元*
-
-</div>
+- The project is not just a single chatbot: it combines cultural knowledge base, multi-agent scheduling, RAG, image generation, WebSocket streaming, OSS archive, and WebGL display.
+- The fallback retrieval and Redis-based task/session state improve demo stability.
+- The system profile API and structured API docs make technical depth easier to explain in defense.
+- The frontend gives judges visible interaction: map selection, gallery browsing, agent group chat, image creation, and 3D display.

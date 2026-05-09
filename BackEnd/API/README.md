@@ -1,186 +1,155 @@
-# OmniSource 后端总接口文档
+# OmniSource Backend API
 
-> 版本：v2.0  
-> 更新日期：2026-05-03  
-> 对应代码：`BackEnd/src/main/java/com/omnisource`  
-> OpenAPI 文件：[`openapi.yaml`](openapi.yaml)
+> Version: v2.1  
+> Updated: 2026-05-09  
+> Service base URL: `http://localhost:8081`  
+> Source: `BackEnd/src/main/java/com/omnisource`
 
-## 基础信息
+## Overview
 
-- 本地 Base URL：`http://localhost:8081`
-- 默认响应格式：`application/json`
-- 流式接口：`GET /api/aigc/stream` 返回 `text/event-stream`
-- 文件上传：`POST /api/upload/image` 使用 `multipart/form-data`
-- WebSocket：`ws://localhost:8081/ws/chat?roomId={roomId}`
-- 当前后端未接入正式登录鉴权，聊天室等部分接口内部默认使用本地用户 `userId = 1`。
+OmniSource backend is a Spring Boot 3.3 service for the "同源" heritage AI platform. It provides:
 
-## 统一响应结构
+- AIGC text chat, SSE streaming chat, multimodal image understanding, and image generation.
+- Multi-agent heritage Q&A with RAG, optional Tavily web search, confidence assessment, and evidence chains.
+- Chat room management with WebSocket streaming agent replies.
+- RAG reload, retrieval debugging, and prompt preview.
+- MCP-style tool registry and tool invocation.
+- OSS image upload and system profile output for demos or dashboards.
+- Realtime voice recognition WebSocket based on DashScope Fun-ASR.
 
-除 `GET /api/aigc/chat`（纯文本）、`GET /api/aigc/stream` 外，HTTP 接口通常返回统一结构：
+Most HTTP APIs return the unified `Result<T>` shape:
 
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {},
-  "timestamp": "2026-05-03T10:00:00"
+  "timestamp": "2026-05-09T10:00:00"
 }
 ```
 
-常见业务状态码：`200` 成功，`400` 请求参数错误，`404` 资源不存在，`500` 服务端错误。实际 HTTP 状态通常仍为 `200`，业务结果以响应体中的 `code` 为准。
+Exceptions:
 
-通用错误响应示例：
+- `GET /api/aigc/chat` returns plain text.
+- `GET /api/aigc/stream` returns `text/event-stream`.
+- WebSocket endpoints use JSON events or binary audio frames.
 
-```json
-{
-  "code": 400,
-  "message": "参数错误",
-  "data": null,
-  "timestamp": "2026-05-03T10:00:00"
-}
-```
+## Endpoint Summary
 
-## 接口总览
-
-| 方法 | 路径 | 模块 | 说明 |
+| Method | Path | Module | Description |
 | --- | --- | --- | --- |
-| GET | `/api/aigc/chat` | AIGC | 普通 AI 问答，直接返回纯文本 |
-| POST | `/api/aigc/chat` | AIGC | 普通 AI 问答（JSON），返回统一 Result，`data` 为回答字符串（**小程序推荐**） |
-| GET | `/api/aigc/stream` | AIGC | SSE 流式 AI 问答，内部拼接 RAG 上下文 |
-| POST | `/api/aigc/multimodal` | AIGC | 图片理解问答 |
-| POST | `/api/aigc/image` | AIGC | 生成图片，可写入聊天室并广播 |
-| GET | `/api/aigc/image/tasks/{taskId}` | AIGC | 查询图片生成任务 |
-| GET | `/api/agents` | Agent | 获取启用的 Agent 列表 |
-| GET | `/api/agents/{code}` | Agent | 按编码获取 Agent 详情 |
-| POST | `/api/chat` | 多 Agent 问答 | 发起一次多 Agent 联合问答 |
-| GET | `/api/chat/{sessionId}` | 多 Agent 问答 | 查询会话最近一次结果 |
-| GET | `/api/chat-rooms` | 聊天室 | 获取当前用户聊天室列表 |
-| POST | `/api/chat-rooms` | 聊天室 | 创建聊天室 |
-| GET | `/api/chat-rooms/{roomId}` | 聊天室 | 获取聊天室详情 |
-| DELETE | `/api/chat-rooms/{roomId}` | 聊天室 | 解散聊天室 |
-| GET | `/api/chat-rooms/{roomId}/agents` | 聊天室 | 获取聊天室 Agent 成员 |
-| PUT | `/api/chat-rooms/{roomId}/agents/{memberId}` | 聊天室 | 替换聊天室 Agent |
-| DELETE | `/api/chat-rooms/{roomId}/agents/{memberId}` | 聊天室 | 移除聊天室 Agent |
-| GET | `/api/chat-rooms/{roomId}/messages` | 聊天室 | 分页获取历史消息 |
-| GET | `/api/chat-rooms/{roomId}/messages/recent` | 聊天室 | 获取最近历史消息 |
-| POST | `/api/rag/reload` | RAG | 重建知识库 |
-| GET | `/api/rag/retrieve` | RAG | 向量检索调试 |
-| GET | `/api/rag/prompt` | RAG | 预览拼接后的 RAG 上下文 |
-| POST | `/api/upload/image` | 上传 | 上传图片到 OSS |
-| WS | `/ws/chat?roomId={roomId}` | WebSocket | 聊天室实时消息通道 |
+| `GET` | `/api/aigc/chat` | AIGC | Plain text model chat. |
+| `POST` | `/api/aigc/chat` | AIGC | JSON model chat, recommended for clients. |
+| `GET` | `/api/aigc/stream` | AIGC | SSE streaming chat with RAG context. |
+| `POST` | `/api/aigc/multimodal` | AIGC | Analyze an image URL with a question. |
+| `POST` | `/api/aigc/image` | AIGC | Generate an image; can persist and broadcast into a room. |
+| `GET` | `/api/aigc/image/tasks/{taskId}` | AIGC | Query image generation task status. |
+| `GET` | `/api/agents` | Agent | List active heritage agents. |
+| `GET` | `/api/agents/{code}` | Agent | Get one agent by code. |
+| `POST` | `/api/chat` | Multi-agent | Run one multi-agent Q&A request. |
+| `GET` | `/api/chat/{sessionId}` | Multi-agent | Read cached multi-agent result. |
+| `GET` | `/api/chat-rooms` | Chat room | List local user's rooms. |
+| `POST` | `/api/chat-rooms` | Chat room | Create a room with selected agents. |
+| `GET` | `/api/chat-rooms/{roomId}` | Chat room | Get room detail. |
+| `DELETE` | `/api/chat-rooms/{roomId}` | Chat room | Dissolve a room. |
+| `GET` | `/api/chat-rooms/{roomId}/agents` | Chat room | List room agent members. |
+| `POST` | `/api/chat-rooms/{roomId}/agents` | Chat room | Add an agent to a room. |
+| `PUT` | `/api/chat-rooms/{roomId}/agents/{memberId}` | Chat room | Replace one room agent member. |
+| `DELETE` | `/api/chat-rooms/{roomId}/agents/{memberId}` | Chat room | Remove one room agent member. |
+| `GET` | `/api/chat-rooms/{roomId}/messages` | Chat history | Page room messages. |
+| `GET` | `/api/chat-rooms/{roomId}/messages/recent` | Chat history | Get recent room messages. |
+| `PUT` | `/api/chat-rooms/{roomId}/messages/{messageId}/feedback` | Chat history | Mark message feedback as `1`, `0`, or `-1`. |
+| `POST` | `/api/rag/reload` | RAG | Reload local JSONL and sync vector store. |
+| `GET` | `/api/rag/retrieve` | RAG | Debug retrieval result. |
+| `GET` | `/api/rag/prompt` | RAG | Preview retrieved context. |
+| `POST` | `/api/upload/image` | Upload | Upload one image file to OSS. |
+| `GET` | `/api/mcp/tools` | MCP | List available tools. |
+| `POST` | `/api/mcp/tools/{name}/call` | MCP | Invoke one registered tool. |
+| `GET` | `/api/system-profile` | System | Return architecture and capability profile. |
+| `WS` | `/ws/chat?roomId={roomId}` | WebSocket | Realtime chat room event stream. |
+| `WS` | `/ws/voice?dialect=mandarin|minnan` | WebSocket | Realtime PCM speech recognition. |
 
 ## AIGC
 
-### GET `/api/aigc/chat`
+### `GET /api/aigc/chat`
 
-普通问答接口，直接返回字符串。
+Plain text chat.
 
-查询参数：
+Query:
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| Name | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `message` | string | 否 | `你好` | 用户输入 |
+| `message` | string | No | `你好` | User message. |
 
-请求示例：
+Example:
 
 ```bash
 curl "http://localhost:8081/api/aigc/chat?message=介绍一下福州寿山石雕"
 ```
 
-响应示例：
+Response:
 
 ```text
-寿山石雕是福州代表性传统工艺之一，以寿山石为材料，常见题材包括人物、山水、花鸟和印章等。
+寿山石雕是福州代表性传统工艺之一……
 ```
 
-### POST `/api/aigc/chat`
+### `POST /api/aigc/chat`
 
-与 GET 能力相同，但使用 JSON 请求体与统一 `Result` 响应，便于微信小程序等客户端解析；长问题不受 URL 长度限制。
+JSON chat. This is better for UniApp and long user input.
 
-请求体：
+Request:
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `message` | string | 是 | 用户输入 |
-
-```bash
-curl -X POST "http://localhost:8081/api/aigc/chat" \
-  -H "Content-Type: application/json" \
-  -d "{\"message\":\"介绍一下福州寿山石雕\"}"
+```json
+{
+  "message": "介绍一下泉州提线木偶"
+}
 ```
 
-响应示例：
+Response data is a string:
 
 ```json
 {
   "code": 200,
   "message": "success",
-  "data": "寿山石雕是福州代表性传统工艺之一……",
-  "timestamp": "2026-05-03T10:00:00"
+  "data": "泉州提线木偶是福建泉州代表性传统戏剧和民间技艺……",
+  "timestamp": "2026-05-09T10:00:00"
 }
 ```
 
-### GET `/api/aigc/stream`
+### `GET /api/aigc/stream`
 
-流式问答接口，返回 `text/event-stream`。服务端会先根据 `message` 检索 RAG 资料，再将拼接后的 prompt 交给模型流式输出。
+SSE streaming chat. The backend first retrieves RAG chunks, then asks the model to answer based on those references.
 
-查询参数：
+Query:
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- |
-| `message` | string | 否 | `你好，请自我介绍` | 用户输入 |
+| Name | Type | Required | Default |
+| --- | --- | --- | --- |
+| `message` | string | No | `你好，请自我介绍` |
 
-请求示例：
+Example:
 
 ```bash
 curl -N "http://localhost:8081/api/aigc/stream?message=寿山石雕有什么特点"
 ```
 
-响应示例：
+### `POST /api/aigc/multimodal`
 
-```text
-data: 寿山石雕
-data: 以石质温润
-data: 和雕刻精细见长
-```
+Analyze an image URL.
 
-### POST `/api/aigc/multimodal`
-
-图片理解问答。
-
-请求体：
+Request:
 
 ```json
 {
   "imageUrl": "https://example.com/image.png",
-  "question": "请描述这张图片"
+  "question": "请描述这张图片中的非遗元素"
 }
 ```
 
-请求示例：
+### `POST /api/aigc/image`
 
-```bash
-curl -X POST "http://localhost:8081/api/aigc/multimodal" \
-  -H "Content-Type: application/json" \
-  -d "{\"imageUrl\":\"https://example.com/image.png\",\"question\":\"请描述这张图片\"}"
-```
+Generate an image. When `roomId` and a valid `agentCode` are provided, the generated image is saved as a chat message and broadcast through `/ws/chat`.
 
-响应示例：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": "图片中展示了一件传统工艺作品，具有雕刻纹理和装饰性细节。",
-  "timestamp": "2026-05-03T10:00:00"
-}
-```
-
-### POST `/api/aigc/image`
-
-生成图片。传入 `roomId` 和有效 `agentCode` 时，生成结果会写入聊天室消息并通过 WebSocket 广播。
-
-请求体：
+Request:
 
 ```json
 {
@@ -192,245 +161,101 @@ curl -X POST "http://localhost:8081/api/aigc/multimodal" \
 }
 ```
 
-响应示例：
+Response data:
 
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": {
-    "imageUrl": "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/chatroom/example.png",
-    "agentCode": "fz_shoushan_stone",
-    "agentName": "寿山石雕器灵",
-    "agentAvatar": "https://example.com/avatar.png",
-    "sourceImageUrl": "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/source/福州/寿山石雕.png",
-    "messageId": "101"
-  },
-  "timestamp": "2026-05-03T10:00:00"
+  "imageUrl": "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/chatroom/example.png",
+  "agentCode": "fz_shoushan_stone",
+  "agentName": "寿山石雕器灵",
+  "agentAvatar": "https://example.com/avatar.png",
+  "sourceImageUrl": "https://java-ai-fzu.oss-cn-beijing.aliyuncs.com/OmniSource/source/福州/寿山石雕.png",
+  "messageId": "101"
 }
 ```
 
-### GET `/api/aigc/image/tasks/{taskId}`
+### `GET /api/aigc/image/tasks/{taskId}`
 
-查询图片生成任务状态。
+Returns an `ImageGenerationTask` record, including task status, prompt, result URL, model name, and error message when available.
 
-响应示例：
+## Agents
 
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "id": 1,
-    "taskId": "task_abc123",
-    "userId": 1,
-    "roomId": 1001,
-    "prompt": "生成一张寿山石雕风格海报",
-    "style": "国风插画",
-    "status": "SUCCEEDED",
-    "resultUrl": "https://example.com/generated.png",
-    "errorMessage": null,
-    "progress": 100,
-    "model": "qwen-image-2.0-pro",
-    "createTime": "2026-05-03T10:00:00",
-    "updateTime": "2026-05-03T10:00:30"
-  },
-  "timestamp": "2026-05-03T10:00:30"
-}
-```
+### `GET /api/agents`
 
-## Agent
+Lists active agents from the database.
 
-### GET `/api/agents`
+### `GET /api/agents/{code}`
 
-获取当前启用的 Agent 列表。
-
-响应示例：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": [
-    {
-      "id": 1,
-      "agentCode": "fz_shoushan_stone",
-      "name": "寿山石雕器灵",
-      "avatar": "https://example.com/avatar.png",
-      "roleType": "HERITAGE_AGENT",
-      "personality": "沉稳、细致、熟悉寿山石文化",
-      "maxTokens": 1200,
-      "temperature": 0.7,
-      "topP": 0.9,
-      "status": 1
-    }
-  ],
-  "timestamp": "2026-05-03T10:00:00"
-}
-```
-
-### GET `/api/agents/{code}`
-
-按 Agent 编码查询详情，例如 `fz_shoushan_stone`。
-
-请求示例：
+Example:
 
 ```bash
 curl "http://localhost:8081/api/agents/fz_shoushan_stone"
 ```
 
-## 多 Agent 问答
+Returns `404` in the response body when the agent code does not exist.
 
-### POST `/api/chat`
+## Multi-Agent Q&A
 
-发起一次多 Agent 联合问答。
+### `POST /api/chat`
 
-请求体：
+Runs one multi-agent Q&A request. This endpoint is different from the persistent chat room WebSocket flow: it returns a complete response containing each agent's answer, RAG references, conflict insight, confidence assessment, and evidence chain.
+
+Request:
 
 ```json
 {
-  "sessionId": "optional-session-id",
-  "query": "寿山石雕有哪些特点？",
-  "heritageId": "fz_shoushan_stone",
+  "sessionId": "demo-session-1",
+  "query": "寿山石雕和德化瓷的文化价值有什么不同？",
+  "heritageId": "fujian-demo",
   "topK": 3,
-  "searchEnabled": true,
-  "agentCodes": ["fz_shoushan_stone", "fz_lacquerware"]
+  "searchEnabled": false,
+  "agentCodes": ["fz_shoushan_stone", "qz_dehua_porcelain"]
 }
 ```
 
-响应示例：
+Important fields:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `query` | string | Yes | User question. |
+| `sessionId` | string | No | If omitted, backend creates `sess_{uuid}`. |
+| `topK` | number | No | RAG retrieval count. Default is `3`. |
+| `searchEnabled` | boolean | No | Enables Tavily web search for RAG agents. |
+| `agentCodes` | string array | No | Agent codes. Empty means default agents. |
+
+### `GET /api/chat/{sessionId}`
+
+Reads the latest cached result from Redis. Cache TTL is configured by `chat.multi-agent.session-ttl-days`.
+
+## Chat Rooms
+
+The current backend does not use formal login yet. `ChatRoomController` uses local user `userId = 1`.
+
+### `GET /api/chat-rooms`
+
+Lists local user's rooms.
+
+### `POST /api/chat-rooms`
+
+Create a room.
 
 ```json
 {
-  "code": 200,
-  "message": "多智能体问答成功",
-  "data": {
-    "sessionId": "session_001",
-    "query": "寿山石雕有哪些特点？",
-    "heritageId": "fz_shoushan_stone",
-    "finalAnswer": "寿山石雕的特点包括石质温润、色彩丰富、因材施艺和题材多样。",
-    "agentReplies": [
-      {
-        "agentCode": "fz_shoushan_stone",
-        "title": "寿山石雕器灵",
-        "content": "寿山石雕重视石色、纹理与雕刻题材的结合。",
-        "references": ["chunk-001"],
-        "searchUsed": false
-      }
-    ],
-    "retrievals": [
-      {
-        "id": "chunk-001",
-        "title": "寿山石雕",
-        "score": 0.92,
-        "content": "寿山石雕是福州传统工艺。",
-        "metadata": {
-          "city": "福州"
-        }
-      }
-    ],
-    "webSearchResult": null
-  },
-  "timestamp": "2026-05-03T10:00:00"
-}
-```
-
-### GET `/api/chat/{sessionId}`
-
-查询指定会话最近一次多 Agent 问答结果。
-
-请求示例：
-
-```bash
-curl "http://localhost:8081/api/chat/session_001"
-```
-
-## 聊天室
-
-### GET `/api/chat-rooms`
-
-获取当前用户的聊天室列表。
-
-### POST `/api/chat-rooms`
-
-创建聊天室。
-
-请求体：
-
-```json
-{
-  "name": "福州非遗讨论室",
+  "name": "福州非遗圆桌",
   "themeId": 1,
-  "agentCodes": ["fz_shoushan_stone", "fz_cork_scene"]
+  "agentCodes": ["fz_shoushan_stone", "fz_cork_scene", "fz_lacquerware"]
 }
 ```
 
-响应示例：
+The configured maximum is `chat.room.max-agents`, currently `6`.
 
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "id": 1001,
-    "roomCode": "ROOM202605030001",
-    "userId": 1,
-    "themeId": 1,
-    "name": "福州非遗讨论室",
-    "description": null,
-    "maxMembers": 6,
-    "memberCount": 2,
-    "messageCount": 0,
-    "status": 1,
-    "createTime": "2026-05-03T10:00:00",
-    "updateTime": "2026-05-03T10:00:00",
-    "isDeleted": 0
-  },
-  "timestamp": "2026-05-03T10:00:00"
-}
+### Agent Member Management
+
+Add an agent:
+
+```http
+POST /api/chat-rooms/{roomId}/agents
 ```
-
-### GET `/api/chat-rooms/{roomId}`
-
-获取聊天室详情。
-
-### DELETE `/api/chat-rooms/{roomId}`
-
-解散聊天室。
-
-### GET `/api/chat-rooms/{roomId}/agents`
-
-获取聊天室 Agent 成员列表。
-
-响应示例：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": [
-    {
-      "id": 10,
-      "roomId": 1001,
-      "memberType": "AGENT",
-      "agentId": 1,
-      "displayName": "寿山石雕器灵",
-      "avatar": "https://example.com/avatar.png",
-      "roleInRoom": "MEMBER",
-      "speakCount": 3,
-      "status": 1,
-      "joinTime": "2026-05-03T10:00:00"
-    }
-  ],
-  "timestamp": "2026-05-03T10:00:00"
-}
-```
-
-### PUT `/api/chat-rooms/{roomId}/agents/{memberId}`
-
-替换指定聊天室成员对应的 Agent。
-
-请求体：
 
 ```json
 {
@@ -438,203 +263,233 @@ curl "http://localhost:8081/api/chat/session_001"
 }
 ```
 
-响应示例：
+Replace an agent:
+
+```http
+PUT /api/chat-rooms/{roomId}/agents/{memberId}
+```
 
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": {
-    "id": 10,
-    "roomId": 1001,
-    "memberType": "AGENT",
-    "agentId": 4,
-    "displayName": "厦门珠绣器灵",
-    "avatar": "https://example.com/xm-avatar.png",
-    "roleInRoom": "MEMBER",
-    "speakCount": 0,
-    "status": 1
-  },
-  "timestamp": "2026-05-03T10:00:00"
+  "agentCode": "qz_string_puppet"
 }
 ```
 
-### DELETE `/api/chat-rooms/{roomId}/agents/{memberId}`
+Remove an agent:
 
-移除聊天室成员。
+```http
+DELETE /api/chat-rooms/{roomId}/agents/{memberId}
+```
 
-### GET `/api/chat-rooms/{roomId}/messages`
+### Messages
 
-分页获取历史消息。
+Page messages:
 
-查询参数：
+```http
+GET /api/chat-rooms/{roomId}/messages?page=1&size=20
+```
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- |
-| `page` | integer | 否 | `1` | 页码 |
-| `size` | integer | 否 | `20` | 每页数量 |
+Recent messages:
 
-响应示例：
+```http
+GET /api/chat-rooms/{roomId}/messages/recent?limit=50
+```
+
+Update feedback:
+
+```http
+PUT /api/chat-rooms/{roomId}/messages/{messageId}/feedback
+```
 
 ```json
 {
-  "code": 200,
-  "message": "success",
-  "data": [
-    {
-      "id": 501,
-      "roomId": 1001,
-      "messageType": "TEXT",
-      "senderType": "USER",
-      "senderId": "1",
-      "senderName": "匿名用户",
-      "content": "介绍一下寿山石雕",
-      "imageUrl": null,
-      "isStream": 0,
-      "searchEnabled": 1,
-      "createTime": "2026-05-03T10:00:00"
-    }
-  ],
-  "timestamp": "2026-05-03T10:00:00"
+  "feedbackStatus": 1
 }
 ```
 
-### GET `/api/chat-rooms/{roomId}/messages/recent`
-
-获取最近历史消息。
-
-查询参数：
-
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- |
-| `limit` | integer | 否 | `50` | 最近消息数量 |
+`feedbackStatus` must be `1`, `0`, or `-1`.
 
 ## RAG
 
-### POST `/api/rag/reload`
+RAG loads `Util/standardList.jsonl` by default, syncs embeddings to Milvus when available, and falls back to local text scoring if Milvus or the embedding service is unavailable.
 
-重建知识库：创建 Milvus collection、导入 JSONL 数据并建立索引。
+### `POST /api/rag/reload`
 
-响应示例：
+Reloads local JSONL and incrementally syncs vector data.
 
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "ready": true,
-    "message": "RAG 知识库已重建"
-  },
-  "timestamp": "2026-05-03T10:00:00"
-}
+### `GET /api/rag/retrieve`
+
+```bash
+curl "http://localhost:8081/api/rag/retrieve?question=柘荣剪纸&topK=3"
 ```
 
-### GET `/api/rag/retrieve`
+### `GET /api/rag/prompt`
 
-向量检索调试接口。
+Returns the context string that will be injected into a model prompt.
 
-查询参数：
+## Upload
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- |
-| `question` | string | 是 | - | 检索问题 |
-| `topK` | integer | 否 | `3` | 返回数量 |
+### `POST /api/upload/image`
 
-响应示例：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": [
-    {
-      "id": "chunk-001",
-      "title": "寿山石雕",
-      "score": 0.92,
-      "content": "寿山石雕是福州传统工艺，强调因材施艺。",
-      "metadata": {
-        "city": "福州",
-        "category": "传统美术"
-      }
-    }
-  ],
-  "timestamp": "2026-05-03T10:00:00"
-}
-```
-
-### GET `/api/rag/prompt`
-
-预览拼接后的 RAG 上下文。
-
-查询参数同 `/api/rag/retrieve`。
-
-响应示例：
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": "【检索资料】\n标题：寿山石雕\n内容：寿山石雕是福州传统工艺...",
-  "timestamp": "2026-05-03T10:00:00"
-}
-```
-
-## 上传
-
-### POST `/api/upload/image`
-
-上传图片到 OSS。
-
-请求类型：`multipart/form-data`
-
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `file` | file | 是 | 图片文件 |
-
-返回数据：
-
-```json
-{
-  "url": "https://example.com/upload.png",
-  "filename": "upload.png"
-}
-```
-
-请求示例：
+Multipart upload to OSS.
 
 ```bash
 curl -X POST "http://localhost:8081/api/upload/image" \
-  -F "file=@D:/tmp/example.png"
+  -F "file=@demo.png"
 ```
+
+Response data:
+
+```json
+{
+  "url": "https://example-bucket/OmniSource/demo.png",
+  "filename": "demo.png"
+}
+```
+
+## MCP Tools
+
+### `GET /api/mcp/tools`
+
+Lists registered tool descriptors.
+
+### `POST /api/mcp/tools/{name}/call`
+
+Request:
+
+```json
+{
+  "arguments": {
+    "query": "寿山石雕"
+  }
+}
+```
+
+Available tools depend on registered implementations under `service/mcp`, such as search, database query, OSS upload, task query, and image generation tools.
+
+## System Profile
+
+### `GET /api/system-profile`
+
+Returns a structured demo profile:
+
+- database and storage stack
+- AI orchestration stack
+- frontend rendering stack
+- data flow
+- innovation keywords
+
+This endpoint is useful for defense presentations and frontend dashboards.
 
 ## WebSocket
 
-连接地址：
+### `/ws/chat?roomId={roomId}`
 
-```text
-ws://localhost:8081/ws/chat?roomId={roomId}
-```
+Realtime room chat endpoint.
 
-客户端发送消息示例：
+Client sends:
 
 ```json
 {
   "type": "CHAT",
   "senderType": "USER",
-  "content": "介绍一下寿山石雕",
-  "imageUrl": null,
+  "content": "你们一起介绍一下寿山石雕",
   "metadata": {
-    "searchEnabled": true,
+    "searchEnabled": false,
     "ragEnabled": true
   }
 }
 ```
 
-服务端可能推送的消息类型包括：`SYSTEM`、`CHAT`、`AGENT_START`、`AGENT_CHUNK`、`AGENT_END`、`IMAGE`、`PROGRESS`、`ERROR`。
+Supported inbound types:
 
-## 调试建议
+- `CHAT`
+- `IMAGE`
+- `EMOJI`
 
-1. 在 `BackEnd/` 目录执行 `mvn spring-boot:run` 启动服务。
-2. 首次使用 RAG 前，先调用 `POST /api/rag/reload`。
-3. 需要实时聊天时，先创建聊天室，再连接 `ws://localhost:8081/ws/chat?roomId={roomId}`。
-4. 导入接口平台时，上传 `BackEnd/API/openapi.yaml`。
+Common outbound types:
+
+- `SYSTEM`: user join/leave or system notice.
+- `CHAT`: normal persisted message.
+- `AGENT_START`: an agent begins streaming.
+- `AGENT_CHUNK`: one streamed text chunk.
+- `AGENT_END`: final event with persisted `messageId`.
+- `IMAGE`: generated image message.
+- `ERROR`: processing error.
+
+### `/ws/voice?dialect=mandarin|minnan`
+
+Realtime speech recognition endpoint.
+
+- Client sends PCM binary audio frames.
+- Text control message `{ "type": "stop" }` stops recognition.
+- `dialect=minnan` uses the configured Minnan model when present; other values use Mandarin.
+
+Outbound JSON events:
+
+```json
+{
+  "type": "ready",
+  "data": {
+    "model": "fun-asr-realtime-2025-09-15",
+    "dialect": "mandarin",
+    "sampleRate": 16000,
+    "time": "2026-05-09T10:00:00"
+  }
+}
+```
+
+```json
+{
+  "type": "transcript",
+  "data": {
+    "text": "寿山石雕",
+    "sentenceEnd": true,
+    "requestId": "..."
+  }
+}
+```
+
+## Runtime Configuration
+
+Backend reads configuration from:
+
+- `BackEnd/src/main/resources/application.yml`
+- optional `application-local.yml`
+- optional `.env` in `BackEnd/` or repository root
+
+Required or commonly used environment variables:
+
+| Variable | Description |
+| --- | --- |
+| `DB_URL` | MySQL JDBC URL. |
+| `DB_USERNAME` | MySQL username. |
+| `DB_PASSWORD` | MySQL password. |
+| `REDIS_HOST` | Redis host. |
+| `REDIS_PORT` | Redis port, default `6379`. |
+| `REDIS_PASSWORD` | Redis password, optional. |
+| `QIANWEN_API_KEY` | OpenAI-compatible DashScope/Qwen key. |
+| `QIANWEN_BASE_URL` | Default `https://dashscope.aliyuncs.com/compatible-mode`. |
+| `QIANWEN_MODEL` | Default `qwen3.5-plus`. |
+| `QIANWEN_IMAGE_MODEL` | Default `qwen-image-2.0-pro`. |
+| `MILVUS_HOST` | Milvus host. |
+| `MILVUS_PORT` | Milvus port, default `19530`. |
+| `ALIYUN_OSS_ACCESS_KEY_ID` | OSS access key id. |
+| `ALIYUN_OSS_ACCESS_KEY_SECRET` | OSS access key secret. |
+| `ALIYUN_OSS_BUCKET_NAME` | OSS bucket, default `java-ai-fzu`. |
+| `TAVILY_API_KEY` | Tavily API key for optional web search. |
+| `DASHSCOPE_API_KEY` | ASR key. Falls back to `QIANWEN_API_KEY` if omitted. |
+
+## Run
+
+```bash
+cd BackEnd
+mvn spring-boot:run
+```
+
+Build:
+
+```bash
+cd BackEnd
+mvn clean package
+```
