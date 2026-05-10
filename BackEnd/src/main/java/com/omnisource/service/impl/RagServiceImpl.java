@@ -92,6 +92,7 @@ public class RagServiceImpl implements RagService {
     private final String milvusDatabase;
     private final String milvusUsername;
     private final String milvusPassword;
+    private final boolean milvusEnabled;
     private final String qianwenApiKey;
     private final String embeddingEndpoint;
     private final String embeddingModel;
@@ -102,6 +103,7 @@ public class RagServiceImpl implements RagService {
     private boolean milvusReady;
     private boolean milvusCollectionPrepared;
     private boolean docKeyFieldMissing;
+    private boolean milvusSyncSuppressed;
 
     public RagServiceImpl(
             ObjectMapper objectMapper,
@@ -114,6 +116,7 @@ public class RagServiceImpl implements RagService {
             @Value("${milvus.database:default}") String milvusDatabase,
             @Value("${milvus.username:}") String milvusUsername,
             @Value("${milvus.password:}") String milvusPassword,
+            @Value("${rag.milvus-enabled:false}") boolean milvusEnabled,
             @Value("${qianwen.api-key:}") String qianwenApiKey,
             @Value("${qianwen.base-url:https://dashscope.aliyuncs.com/compatible-mode}") String qianwenBaseUrl,
             @Value("${qianwen.embedding-model:text-embedding-v3}") String embeddingModel) {
@@ -127,16 +130,20 @@ public class RagServiceImpl implements RagService {
         this.milvusDatabase = StringUtils.hasText(milvusDatabase) ? milvusDatabase : "default";
         this.milvusUsername = milvusUsername;
         this.milvusPassword = milvusPassword;
+        this.milvusEnabled = milvusEnabled;
         this.qianwenApiKey = qianwenApiKey;
         this.embeddingEndpoint = resolveEmbeddingEndpoint(qianwenBaseUrl);
         this.embeddingModel = embeddingModel;
-        initializeMilvusClient();
+        if (this.milvusEnabled) {
+            initializeMilvusClient();
+        }
     }
 
     @PostConstruct
     public void init() {
         try {
-            refreshAndSync();
+            documents.clear();
+            loadLocalDocuments();
         } catch (Exception e) {
             milvusReady = false;
             log.warn("RAG init skipped, falling back to local retrieval only: {}", e.getMessage(), e);
@@ -247,6 +254,11 @@ public class RagServiceImpl implements RagService {
             return;
         }
 
+        if (!milvusEnabled || milvusSyncSuppressed) {
+            milvusReady = false;
+            return;
+        }
+
         if (milvusClient == null) {
             initializeMilvusClient();
         }
@@ -256,9 +268,10 @@ public class RagServiceImpl implements RagService {
         }
 
         if (shouldRebuildBeforeSync()) {
-            log.info("Milvus schema version mismatch or unknown, rebuilding collection first: {}", collectionName);
-            rebuildCollectionAndResync();
-            markSchemaVersion();
+            log.info("Milvus schema version mismatch detected, rebuilding collection first: {}", collectionName);
+            if (rebuildCollectionAndResync()) {
+                markSchemaVersion();
+            }
             return;
         }
 
@@ -279,20 +292,6 @@ public class RagServiceImpl implements RagService {
             }
 
             try {
-                List<ExistingDocument> existingDocuments = queryExistingDocuments(docKey);
-                if (docKeyFieldMissing) {
-                    break;
-                }
-                if (!existingDocuments.isEmpty()) {
-                    boolean alreadySynced = existingDocuments.stream()
-                            .anyMatch(existing -> fingerprint.equals(existing.fingerprint()));
-                    if (alreadySynced) {
-                        cacheFingerprint(docKey, fingerprint);
-                        continue;
-                    }
-                    deleteExistingDocuments(existingDocuments);
-                }
-
                 List<Float> embedding = embedText(buildEmbeddingText(doc));
                 if (embedding.isEmpty()) {
                     continue;
@@ -300,6 +299,23 @@ public class RagServiceImpl implements RagService {
                 if (embeddingDimension == null) {
                     embeddingDimension = embedding.size();
                 }
+
+                if (milvusCollectionPrepared) {
+                    List<ExistingDocument> existingDocuments = queryExistingDocuments(docKey);
+                    if (docKeyFieldMissing) {
+                        break;
+                    }
+                    if (!existingDocuments.isEmpty()) {
+                        boolean alreadySynced = existingDocuments.stream()
+                                .anyMatch(existing -> fingerprint.equals(existing.fingerprint()));
+                        if (alreadySynced) {
+                            cacheFingerprint(docKey, fingerprint);
+                            continue;
+                        }
+                        deleteExistingDocuments(existingDocuments);
+                    }
+                }
+
                 candidates.add(new SyncCandidate(doc, docKey, fingerprint, embedding));
             } catch (Exception e) {
                 log.warn("RAG document sync failed: {}", e.getMessage());
@@ -314,6 +330,9 @@ public class RagServiceImpl implements RagService {
 
         if (candidates.isEmpty()) {
             milvusReady = safeLoadCollection();
+            if (milvusReady) {
+                markSchemaVersion();
+            }
             return;
         }
 
@@ -335,10 +354,10 @@ public class RagServiceImpl implements RagService {
         }
     }
 
-    private void rebuildCollectionAndResync() {
+    private boolean rebuildCollectionAndResync() {
         if (milvusClient == null) {
             milvusReady = false;
-            return;
+            return false;
         }
 
         try {
@@ -368,12 +387,12 @@ public class RagServiceImpl implements RagService {
 
         if (dimension == null || allCandidates.isEmpty()) {
             milvusReady = false;
-            return;
+            return false;
         }
 
         if (!ensureMilvusCollection(dimension)) {
             milvusReady = false;
-            return;
+            return false;
         }
 
         insertCandidates(allCandidates);
@@ -383,10 +402,14 @@ public class RagServiceImpl implements RagService {
 
         try {
             milvusReady = safeFlushAndLoad();
-            markSchemaVersion();
+            if (milvusReady) {
+                markSchemaVersion();
+            }
+            return milvusReady;
         } catch (RuntimeException e) {
             milvusReady = false;
             log.warn("Milvus load after rebuild failed: {}", e.getMessage());
+            return false;
         }
     }
 
@@ -475,6 +498,7 @@ public class RagServiceImpl implements RagService {
             milvusCollectionPrepared = true;
             return true;
         } catch (Exception e) {
+            handleMilvusTransportFailure(e, "prepare collection");
             if (isCollectionAlreadyExists(e)) {
                 milvusCollectionPrepared = true;
                 return true;
@@ -616,6 +640,7 @@ public class RagServiceImpl implements RagService {
             }
             return existingDocuments;
         } catch (Exception e) {
+            handleMilvusTransportFailure(e, "query existing documents");
             if (isDocKeyMissingError(e)) {
                 docKeyFieldMissing = true;
                 log.warn("Milvus schema mismatch detected: {}", e.getMessage());
@@ -777,6 +802,9 @@ public class RagServiceImpl implements RagService {
 
     private boolean shouldRebuildBeforeSync() {
         Object current = redisTemplate.opsForValue().get(schemaVersionKey());
+        if (current == null) {
+            return false;
+        }
         return !CURRENT_SCHEMA_VERSION.equals(String.valueOf(current));
     }
 
@@ -1087,6 +1115,7 @@ public class RagServiceImpl implements RagService {
                     .build());
             return true;
         } catch (Exception e) {
+            handleMilvusTransportFailure(e, "load collection");
             log.warn("Milvus load failed: {}", e.getMessage());
             return false;
         }
@@ -1101,9 +1130,31 @@ public class RagServiceImpl implements RagService {
                     .build());
             return safeLoadCollection();
         } catch (Exception e) {
+            handleMilvusTransportFailure(e, "flush collection");
             log.warn("Milvus flush failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    private void handleMilvusTransportFailure(Exception e, String action) {
+        if (milvusSyncSuppressed || !isMilvusTransportFailure(e)) {
+            return;
+        }
+
+        milvusSyncSuppressed = true;
+        milvusReady = false;
+        milvusCollectionPrepared = false;
+        milvusClient = null;
+        log.warn("Milvus {} failed due to transport error, suppressing further Milvus sync in this run: {}", action, e.getMessage());
+    }
+
+    private boolean isMilvusTransportFailure(Exception e) {
+        String message = e == null ? "" : String.valueOf(e.getMessage());
+        String text = message.toUpperCase();
+        return text.contains("UNAVAILABLE")
+                || text.contains("NETWORK CLOSED")
+                || text.contains("CONNECTION REFUSED")
+                || text.contains("TRANSPORT CLOSED");
     }
 
     private boolean isCollectionAlreadyExists(Exception e) {

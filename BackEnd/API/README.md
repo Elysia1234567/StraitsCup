@@ -1,7 +1,7 @@
 # OmniSource Backend API
 
-> Version: v2.1  
-> Updated: 2026-05-09  
+> Version: v2.2  
+> Updated: 2026-05-10  
 > Service base URL: `http://localhost:8081`  
 > Source: `BackEnd/src/main/java/com/omnisource`
 
@@ -12,7 +12,7 @@ OmniSource backend is a Spring Boot 3.3 service for the "同源" heritage AI pla
 - AIGC text chat, SSE streaming chat, multimodal image understanding, and image generation.
 - Multi-agent heritage Q&A with RAG, optional Tavily web search, confidence assessment, and evidence chains.
 - Chat room management with WebSocket streaming agent replies.
-- RAG reload, retrieval debugging, and prompt preview.
+- RAG reload, retrieval debugging, and prompt preview with local JSONL fallback.
 - MCP-style tool registry and tool invocation.
 - OSS image upload and system profile output for demos or dashboards.
 - Realtime voice recognition WebSocket based on DashScope Fun-ASR.
@@ -59,7 +59,7 @@ Exceptions:
 | `GET` | `/api/chat-rooms/{roomId}/messages` | Chat history | Page room messages. |
 | `GET` | `/api/chat-rooms/{roomId}/messages/recent` | Chat history | Get recent room messages. |
 | `PUT` | `/api/chat-rooms/{roomId}/messages/{messageId}/feedback` | Chat history | Mark message feedback as `1`, `0`, or `-1`. |
-| `POST` | `/api/rag/reload` | RAG | Reload local JSONL and sync vector store. |
+| `POST` | `/api/rag/reload` | RAG | Reload local JSONL and optionally sync vector store when Milvus is enabled. |
 | `GET` | `/api/rag/retrieve` | RAG | Debug retrieval result. |
 | `GET` | `/api/rag/prompt` | RAG | Preview retrieved context. |
 | `POST` | `/api/upload/image` | Upload | Upload one image file to OSS. |
@@ -311,11 +311,11 @@ PUT /api/chat-rooms/{roomId}/messages/{messageId}/feedback
 
 ## RAG
 
-RAG loads `Util/standardList.jsonl` by default, syncs embeddings to Milvus when available, and falls back to local text scoring if Milvus or the embedding service is unavailable.
+RAG loads `Util/standardList.jsonl` by default. The backend now keeps local retrieval available first, and only syncs Milvus when `RAG_MILVUS_ENABLED=true`. If Milvus or the embedding service is unavailable, the service remains usable through local text scoring.
 
 ### `POST /api/rag/reload`
 
-Reloads local JSONL and incrementally syncs vector data.
+Reloads local JSONL and, when Milvus is enabled, incrementally syncs vector data.
 
 ### `GET /api/rag/retrieve`
 
@@ -472,6 +472,7 @@ Required or commonly used environment variables:
 | `QIANWEN_BASE_URL` | Default `https://dashscope.aliyuncs.com/compatible-mode`. |
 | `QIANWEN_MODEL` | Default `qwen3.5-plus`. |
 | `QIANWEN_IMAGE_MODEL` | Default `qwen-image-2.0-pro`. |
+| `RAG_MILVUS_ENABLED` | Enables Milvus sync and vector retrieval. Default `false`. |
 | `MILVUS_HOST` | Milvus host. |
 | `MILVUS_PORT` | Milvus port, default `19530`. |
 | `ALIYUN_OSS_ACCESS_KEY_ID` | OSS access key id. |
