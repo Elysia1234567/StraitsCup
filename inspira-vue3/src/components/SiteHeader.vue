@@ -8,10 +8,10 @@ const navItemClass = (path) =>
 </script>
 
 <template>
-  <header class="absolute inset-x-0 top-0 z-30 h-16 border-b border-white/[0.08] bg-transparent backdrop-blur-md">
+  <header class="fixed inset-x-0 top-0 z-40 h-16 border-b border-white/10 bg-[rgba(2,8,20,0.74)] backdrop-blur-xl">
     <nav class="grid h-full w-full grid-cols-[1fr_auto_1fr] items-center px-6">
       <RouterLink
-        class="flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-white/15 transition hover:bg-white/[0.06]"
+        class="flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-white/15 transition hover:bg-white/10 hover:ring-white/25"
         to="/"
         aria-label="Omni Source home"
       >

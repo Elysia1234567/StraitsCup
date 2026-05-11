@@ -50,9 +50,14 @@ export function useMultiAgentChat() {
   const wsError = ref(null);
   const loadingRooms = ref(false);
   const loadingMessages = ref(false);
+  const chatRevision = ref(0);
   const ws = shallowRef(null);
   /** @type {Map<string, number>} streamId -> index in messages */
   const streamIndex = new Map();
+
+  function bumpChatRevision() {
+    chatRevision.value += 1;
+  }
 
   function disconnectWs() {
     if (ws.value) {
@@ -113,6 +118,7 @@ export function useMultiAgentChat() {
     const i = messages.value.findIndex((m) => m.role === 'user' && m.pending && m.content === content);
     if (i !== -1) {
       messages.value.splice(i, 1);
+      bumpChatRevision();
     }
   }
 
@@ -132,6 +138,7 @@ export function useMultiAgentChat() {
             messageType: msg.messageType || 'TEXT',
             feedbackStatus: 0,
           });
+          bumpChatRevision();
         }
         break;
       }
@@ -149,6 +156,7 @@ export function useMultiAgentChat() {
           metadata: msg.metadata || null,
         });
         streamIndex.set(msg.streamId, messages.value.length - 1);
+        bumpChatRevision();
         break;
       }
       case 'AGENT_CHUNK': {
@@ -157,6 +165,7 @@ export function useMultiAgentChat() {
         const row = messages.value[idx];
         if (row) {
           row.content = (row.content || '') + (msg.content || '');
+          bumpChatRevision();
         }
         break;
       }
@@ -170,6 +179,7 @@ export function useMultiAgentChat() {
           row.messageId = msg.messageId;
           row.id = msg.messageId;
           row.metadata = msg.metadata || row.metadata || null;
+          bumpChatRevision();
         }
         streamIndex.delete(msg.streamId);
         break;
@@ -190,6 +200,7 @@ export function useMultiAgentChat() {
             metadata: msg.metadata || null,
             streaming: false,
           });
+          bumpChatRevision();
         }
         break;
       }
@@ -199,6 +210,7 @@ export function useMultiAgentChat() {
           content: msg.content || '',
           onlineCount: msg.onlineCount,
         });
+        bumpChatRevision();
         break;
       }
       case 'ERROR': {
@@ -206,6 +218,7 @@ export function useMultiAgentChat() {
           role: 'system',
           content: msg.senderType === 'AGENT' ? `${msg.senderName || 'Agent'}：${msg.content || '出错'}` : msg.content || '错误',
         });
+        bumpChatRevision();
         break;
       }
       default:
@@ -264,6 +277,7 @@ export function useMultiAgentChat() {
       const chronological = Array.isArray(list) ? [...list].reverse() : [];
       messages.value = chronological.map(mapHistoryMessage);
       await loadRoomChatAgents(roomId);
+      bumpChatRevision();
     } catch (e) {
       wsError.value = e instanceof Error ? e.message : String(e);
       messages.value = [];
@@ -298,26 +312,32 @@ export function useMultiAgentChat() {
     return room;
   }
 
-  function sendUserMessage(text, { searchEnabled = false } = {}) {
+  function sendUserMessage(text, { searchEnabled = false, ragEnabled = true, respondAll = false, imageUrl = null } = {}) {
     if (!ws.value || ws.value.readyState !== WebSocket.OPEN || !currentRoomId.value) {
       wsError.value = '未连接到聊天室';
       return;
     }
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed && !imageUrl) return;
 
     messages.value.push({
       role: 'user',
       content: trimmed,
       pending: true,
+      imageUrl,
+      messageType: imageUrl ? 'IMAGE' : 'TEXT',
     });
+    bumpChatRevision();
 
     const payload = {
       type: 'CHAT',
       senderType: 'USER',
       content: trimmed,
+      imageUrl,
       metadata: {
         searchEnabled,
+        ragEnabled,
+        respondAll,
       },
     };
     ws.value.send(JSON.stringify(payload));
@@ -336,6 +356,7 @@ export function useMultiAgentChat() {
     wsError,
     loadingRooms,
     loadingMessages,
+    chatRevision,
     loadRooms,
     openRoom,
     createNewRoom,

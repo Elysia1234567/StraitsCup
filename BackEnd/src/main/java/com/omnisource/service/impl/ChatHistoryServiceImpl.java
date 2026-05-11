@@ -68,6 +68,11 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
     }
 
     @Override
+    public int countMessages(Long roomId) {
+        return chatMessageMapper.countByRoomId(roomId);
+    }
+
+    @Override
     public void clearHistory(Long roomId) {
         redisTemplate.delete(REDIS_HISTORY_KEY_PREFIX + roomId);
         chatMessageMapper.deleteByRoomId(roomId);

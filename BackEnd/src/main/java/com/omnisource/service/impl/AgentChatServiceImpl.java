@@ -65,12 +65,18 @@ public class AgentChatServiceImpl implements AgentChatService {
 
     @Override
     public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl, boolean searchEnabled) {
-        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, true);
+        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, true, false);
     }
 
     @Override
     public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl,
                                   boolean searchEnabled, boolean ragEnabled) {
+        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled, false);
+    }
+
+    @Override
+    public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl,
+                                  boolean searchEnabled, boolean ragEnabled, boolean respondAll) {
         ChatMessage userMsg = new ChatMessage();
         userMsg.setRoomId(roomId);
         userMsg.setMessageType(imageUrl != null ? "IMAGE" : "TEXT");
@@ -93,7 +99,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         }
 
         boolean freeDiscussion = isFreeDiscussion(content);
-        boolean allAgentsMentioned = shouldAllAgentsRespond(content);
+        boolean allAgentsMentioned = respondAll || shouldAllAgentsRespond(content);
         roomDiscussionCounters.put(roomId, new AtomicInteger(0));
 
         String searchResult = searchEnabled ? tavilySearchService.searchAndFormat(content) : null;

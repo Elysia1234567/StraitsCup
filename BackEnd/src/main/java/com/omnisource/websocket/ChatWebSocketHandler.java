@@ -71,7 +71,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     boolean ragEnabled = wsMsg.getMetadata() == null
                             || !wsMsg.getMetadata().containsKey("ragEnabled")
                             || Boolean.TRUE.equals(wsMsg.getMetadata().get("ragEnabled"));
-                    agentChatService.handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled);
+                    boolean respondAll = wsMsg.getMetadata() != null
+                            && (Boolean.TRUE.equals(wsMsg.getMetadata().get("respondAll"))
+                            || Boolean.TRUE.equals(wsMsg.getMetadata().get("mentionAll")));
+                    agentChatService.handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled, respondAll);
                 }
                 default -> log.debug("未处理的消息类型: {}", wsMsg.getType());
             }

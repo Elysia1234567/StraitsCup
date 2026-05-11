@@ -3,7 +3,9 @@ package com.omnisource.controller;
 import com.omnisource.entity.ChatMessage;
 import com.omnisource.entity.ChatRoom;
 import com.omnisource.entity.ChatRoomMember;
+import com.omnisource.dto.response.ChatRoomInsightResponse;
 import com.omnisource.service.ChatHistoryService;
+import com.omnisource.service.ChatRoomInsightService;
 import com.omnisource.service.ChatRoomService;
 import com.omnisource.utils.Result;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
     private final ChatHistoryService chatHistoryService;
+    private final ChatRoomInsightService chatRoomInsightService;
 
     @GetMapping
     public Result<List<ChatRoom>> getMyRooms() {
@@ -49,6 +52,12 @@ public class ChatRoomController {
     @GetMapping("/{roomId}")
     public Result<ChatRoom> getRoom(@PathVariable Long roomId) {
         return Result.success(chatRoomService.getRoomById(roomId));
+    }
+
+    @GetMapping("/{roomId}/insight")
+    public Result<ChatRoomInsightResponse> getRoomInsight(@PathVariable Long roomId) {
+        ChatRoomInsightResponse insight = chatRoomInsightService.getRoomInsight(roomId);
+        return insight != null ? Result.success(insight) : Result.notFound("聊天室不存在");
     }
 
     @GetMapping("/{roomId}/agents")

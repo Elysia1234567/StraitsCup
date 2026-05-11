@@ -29,6 +29,10 @@ export function fetchRecentMessages(roomId, limit = 80) {
   return apiFetch(`/api/chat-rooms/${roomId}/messages/recent?limit=${limit}`);
 }
 
+export function fetchRoomInsight(roomId) {
+  return apiFetch(`/api/chat-rooms/${roomId}/insight`);
+}
+
 export function fetchAgents() {
   return apiFetch('/api/agents');
 }
@@ -64,6 +68,23 @@ export function generateAgentImage(payload) {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export async function uploadImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/upload/image', {
+    method: 'POST',
+    body: formData,
+  });
+  const body = await res.json().catch(() => null);
+  if (!body || typeof body.code !== 'number') {
+    throw new Error(res.ok ? '接口返回格式异常' : `HTTP ${res.status}`);
+  }
+  if (body.code !== 200) {
+    throw new Error(body.message || `请求失败 (${body.code})`);
+  }
+  return body.data;
 }
 
 export function chatOnce(message) {
