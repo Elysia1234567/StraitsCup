@@ -11,7 +11,7 @@ OmniSource backend is a Spring Boot 3.3 service for the "同源" heritage AI pla
 
 - AIGC text chat, SSE streaming chat, multimodal image understanding, and image generation.
 - Multi-agent heritage Q&A with RAG, optional Tavily web search, confidence assessment, and evidence chains.
-- Chat room management with WebSocket streaming agent replies.
+- Chat room management with WebSocket streaming agent replies, historical room switching, room agent add/remove, and insight generation.
 - RAG reload, retrieval debugging, and prompt preview with local JSONL fallback.
 - MCP-style tool registry and tool invocation.
 - OSS image upload and system profile output for demos or dashboards.
@@ -51,6 +51,7 @@ Exceptions:
 | `GET` | `/api/chat-rooms` | Chat room | List local user's rooms. |
 | `POST` | `/api/chat-rooms` | Chat room | Create a room with selected agents. |
 | `GET` | `/api/chat-rooms/{roomId}` | Chat room | Get room detail. |
+| `GET` | `/api/chat-rooms/{roomId}/insight` | Chat room | Get knowledge summary, key evidence, confidence, and provenance for the latest room state. |
 | `DELETE` | `/api/chat-rooms/{roomId}` | Chat room | Dissolve a room. |
 | `GET` | `/api/chat-rooms/{roomId}/agents` | Chat room | List room agent members. |
 | `POST` | `/api/chat-rooms/{roomId}/agents` | Chat room | Add an agent to a room. |
@@ -308,6 +309,27 @@ PUT /api/chat-rooms/{roomId}/messages/{messageId}/feedback
 ```
 
 `feedbackStatus` must be `1`, `0`, or `-1`.
+
+### Room Insight
+
+`GET /api/chat-rooms/{roomId}/insight` returns the current room insight payload used by the right-side panel in the web Agent page. The service combines:
+
+- latest question and answer
+- room agent members
+- `chat_message.metadata`
+- `chat_message.search_results`
+- RAG retrieval fallback
+- web search fallback
+
+The response includes:
+
+- `summary`
+- `confidence` with `score`, `level`, and `reason`
+- `evidenceSources`
+- `knowledgeTags`
+- `relationPaths`
+
+This feature does not require a new database table in the current version. If you later want to persist every insight snapshot, you can add a dedicated snapshot table.
 
 ## RAG
 

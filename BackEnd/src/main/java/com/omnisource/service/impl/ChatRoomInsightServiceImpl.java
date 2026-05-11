@@ -268,12 +268,26 @@ public class ChatRoomInsightServiceImpl implements ChatRoomInsightService {
     private ConfidenceView buildConfidenceView(Map<String, Object> confidence, Map<String, Object> rag,
                                                Map<String, Object> webSearch, List<EvidenceSourceView> evidenceSources) {
         Double score = normalizeScore(confidence.get("score"));
-        if (score == 0.0 && !evidenceSources.isEmpty()) {
-            score = evidenceSources.stream()
+        int evidenceCount = evidenceSources == null ? 0 : evidenceSources.size();
+        if (score == 0.0 && evidenceCount > 0) {
+            double strongest = evidenceSources.stream()
                     .map(EvidenceSourceView::getConfidence)
                     .filter(value -> value != null && value > 0)
                     .max(Double::compareTo)
-                    .orElse(Math.min(0.88, 0.58 + evidenceSources.size() * 0.05));
+                    .orElse(0.0);
+            double average = evidenceSources.stream()
+                    .map(EvidenceSourceView::getConfidence)
+                    .filter(value -> value != null && value > 0)
+                    .mapToDouble(Double::doubleValue)
+                    .average()
+                    .orElse(0.0);
+            double base = Math.max(strongest, average);
+            if (base <= 0.0) {
+                base = 0.62;
+            }
+            score = Math.min(0.92, Math.max(base, 0.68) + Math.min(0.10, evidenceCount * 0.02));
+        } else if (score > 0.0 && evidenceCount > 0) {
+            score = Math.min(0.95, score + Math.min(0.08, evidenceCount * 0.01));
         }
         String level = firstNonBlank(
                 stringValue(confidence.get("level")),

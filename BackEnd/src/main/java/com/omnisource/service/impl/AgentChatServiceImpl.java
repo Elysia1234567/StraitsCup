@@ -611,25 +611,35 @@ public class AgentChatServiceImpl implements AgentChatService {
             }
         }
 
+        int ragCount = ragSources == null ? 0 : ragSources.size();
+        int webCount = webSources == null ? 0 : webSources.size();
+        double boostedScore;
         String level;
         String reason;
-        if (ragSources.size() >= 3 && maxScore >= 0.70) {
+        if (ragCount >= 3 && maxScore >= 0.70) {
             level = "高";
             reason = "RAG 命中多条资料且最高相似度较高";
-        } else if (!ragSources.isEmpty() || !webSources.isEmpty()) {
+            boostedScore = Math.min(0.96, Math.max(maxScore, 0.82) + Math.min(0.06, (ragCount - 2) * 0.015 + webCount * 0.01));
+        } else if (ragCount > 0 || webCount > 0) {
             level = "中";
-            reason = !ragSources.isEmpty() ? "存在 RAG 资料支撑，但建议结合原始资料核验" : "使用联网搜索结果补充，建议核验网页来源";
+            reason = !ragSources.isEmpty()
+                    ? "存在 RAG 资料支撑，但建议结合原始资料核验"
+                    : "使用联网搜索结果补充，建议核验网页来源";
+            double base = maxScore > 0 ? maxScore : 0.58;
+            double bonus = Math.min(0.18, ragCount * 0.05 + webCount * 0.04);
+            boostedScore = Math.min(0.90, Math.max(base, 0.66) + bonus);
         } else {
             level = "低";
             reason = "未检索到明确 RAG 或网页来源";
+            boostedScore = 0.26;
         }
 
         Map<String, Object> confidence = new LinkedHashMap<>();
         confidence.put("level", level);
-        confidence.put("score", maxScore);
+        confidence.put("score", boostedScore);
         confidence.put("reason", reason);
-        confidence.put("ragCount", ragSources.size());
-        confidence.put("webCount", webSources.size());
+        confidence.put("ragCount", ragCount);
+        confidence.put("webCount", webCount);
         return confidence;
     }
 

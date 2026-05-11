@@ -127,3 +127,44 @@
   "isDeleted": 0
 }
 ```
+
+## ChatRoomInsightResponse
+
+```json
+{
+  "roomId": 1,
+  "roomName": "福建非遗讨论室",
+  "agentCount": 3,
+  "messageCount": 12,
+  "latestQuestion": "寿山石雕有什么特点？",
+  "latestAnswer": "寿山石雕以石质温润、刀法精细见长……",
+  "latestAgentName": "寿山石雕器灵",
+  "latestUpdateTime": "2026-05-02T10:30:00",
+  "summary": "已围绕寿山石雕完成知识检索与综合回答。",
+  "confidence": {
+    "score": 0.92,
+    "level": "高",
+    "reason": "已基于 RAG、联网搜索或群聊记录生成证据链"
+  },
+  "evidenceSources": [
+    {
+      "id": "rag-1",
+      "title": "寿山石雕知识条目",
+      "provider": "RAG 知识库",
+      "confidence": 0.89,
+      "date": "2026-05-02",
+      "excerpt": "寿山石雕是福州传统工艺之一……",
+      "type": "RAG",
+      "url": ""
+    }
+  ],
+  "knowledgeTags": ["福建非遗讨论室", "寿山石雕器灵", "RAG", "多智能体"],
+  "relationPaths": [
+    { "key": "群聊主题", "value": "福建非遗讨论室" },
+    { "key": "最新提问", "value": "寿山石雕有什么特点？" },
+    { "key": "最近回复", "value": "寿山石雕器灵" },
+    { "key": "证据来源", "value": "1 条" },
+    { "key": "置信度", "value": "0.92 · 高" }
+  ]
+}
+```

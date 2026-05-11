@@ -37,6 +37,8 @@ Content-Type: application/json
 
 响应：`data` 为创建后的 `ChatRoom`。
 
+当前前端已支持从历史聊天室直接切换，也支持在房间内继续增删 Agent。聊天室列表返回后，前端可据此恢复历史房间继续对话。
+
 ## 3. 获取聊天室详情
 
 ```http
@@ -98,7 +100,31 @@ DELETE /api/chat-rooms/{roomId}/agents/{memberId}
 
 业务校验失败时返回 `400`。
 
-## 8. 分页获取历史消息
+## 8. 获取聊天室洞察
+
+```http
+GET /api/chat-rooms/{roomId}/insight
+```
+
+响应：`data` 为 `ChatRoomInsightResponse`，字段包括：
+
+| 字段 | 说明 |
+| --- | --- |
+| roomId | 聊天室 ID |
+| roomName | 聊天室名称 |
+| agentCount | 当前 Agent 数量 |
+| messageCount | 消息数量 |
+| latestQuestion | 最近一条用户提问 |
+| latestAnswer | 最近一条 Agent 回复 |
+| latestAgentName | 最近发言 Agent 名称 |
+| latestUpdateTime | 最近更新时间 |
+| summary | 知识摘要 |
+| confidence | 综合置信度对象 |
+| evidenceSources | 关键证据列表 |
+| knowledgeTags | 知识标签 |
+| relationPaths | 溯源路径 |
+
+## 9. 分页获取历史消息
 
 ```http
 GET /api/chat-rooms/{roomId}/messages?page=1&size=20
@@ -113,7 +139,7 @@ GET /api/chat-rooms/{roomId}/messages?page=1&size=20
 
 响应：`data` 为 `ChatMessage[]`。
 
-## 9. 获取最近历史消息
+## 10. 获取最近历史消息
 
 ```http
 GET /api/chat-rooms/{roomId}/messages/recent?limit=50
