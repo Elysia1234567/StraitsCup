@@ -114,15 +114,15 @@ export default {
   overflow: hidden;
   @include cyber-content-card;
   box-shadow:
-    0 12rpx 48rpx rgba(0, 0, 0, 0.35),
-    0 0 60rpx rgba(122, 66, 244, 0.2);
+    0 12rpx 48rpx rgba(0, 0, 0, 0.4),
+    0 0 60rpx rgba(22, 93, 255, 0.1);
 }
 
 .featured-img {
   width: 100%;
   height: 380rpx;
   display: block;
-  background: rgba(18, 12, 38, 0.95);
+  background: rgba(18, 18, 18, 0.95);
 }
 
 .featured-overlay {
@@ -132,8 +132,8 @@ export default {
   bottom: 16rpx;
   padding: 20rpx 22rpx;
   border-radius: $cyber-radius-md;
-  background: rgba(12, 6, 28, 0.72);
-  border: 1rpx solid rgba(196, 181, 253, 0.28);
+  background: rgba(0, 0, 0, 0.62);
+  border: 1rpx solid rgba(22, 93, 255, 0.22);
 }
 
 .featured-label {
@@ -198,7 +198,7 @@ export default {
   right: 0;
   bottom: 0;
   padding: 14rpx 16rpx;
-  background: linear-gradient(180deg, transparent 0%, rgba(8, 4, 20, 0.88) 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.82) 100%);
 }
 
 .grid-title {

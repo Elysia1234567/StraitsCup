@@ -1,27 +1,27 @@
-/* Wot Design Uni：深紫光晕 + 紫色主按钮倾向 */
+/* Wot Design Uni：纯黑底 + 深蓝主题色 */
 
 page {
-  --wot-color-theme: #a78bfa;
-  --wot-color-purple: #7a42f4;
-  --wot-color-danger: #ff2ee6;
+  --wot-color-theme: #165dff;
+  --wot-color-purple: #0e4bcc;
+  --wot-color-danger: #ff453a;
   --wot-color-success: #34d19d;
 
-  --wot-dark-background: #0a0518;
-  --wot-dark-background2: rgba(18, 12, 38, 0.94);
-  --wot-dark-background3: #14102a;
-  --wot-dark-background4: rgba(122, 66, 244, 0.15);
-  --wot-dark-border-color: rgba(167, 139, 250, 0.28);
-  --wot-dark-color: #f3eeff;
-  --wot-dark-color3: rgba(196, 188, 220, 0.82);
+  --wot-dark-background: #0a0a0a;
+  --wot-dark-background2: rgba(18, 18, 18, 0.94);
+  --wot-dark-background3: #1a1a1a;
+  --wot-dark-background4: rgba(22, 93, 255, 0.12);
+  --wot-dark-border-color: rgba(22, 93, 255, 0.26);
+  --wot-dark-color: #ffffff;
+  --wot-dark-color3: rgba(208, 208, 208, 0.88);
 
-  --wot-color-icon: rgba(167, 139, 250, 0.88);
-  --wot-color-icon-active: #c4b5fd;
-  --wot-color-icon-disabled: rgba(92, 85, 120, 0.55);
+  --wot-color-icon: rgba(180, 180, 180, 0.85);
+  --wot-color-icon-active: #3d7cff;
+  --wot-color-icon-disabled: rgba(120, 120, 120, 0.5);
 
-  --wot-color-title: #f3eeff;
-  --wot-color-content: #ddd6fe;
-  --wot-color-secondary: rgba(196, 188, 220, 0.75);
-  --wot-color-border: rgba(167, 139, 250, 0.22);
-  --wot-color-border-light: rgba(122, 66, 244, 0.18);
-  --wot-color-bg: rgba(8, 5, 16, 0.96);
+  --wot-color-title: #ffffff;
+  --wot-color-content: #e8e8e8;
+  --wot-color-secondary: rgba(200, 200, 200, 0.78);
+  --wot-color-border: rgba(255, 255, 255, 0.1);
+  --wot-color-border-light: rgba(22, 93, 255, 0.16);
+  --wot-color-bg: rgba(10, 10, 10, 0.97);
 }

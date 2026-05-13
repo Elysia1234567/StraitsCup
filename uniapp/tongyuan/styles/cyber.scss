@@ -1,80 +1,85 @@
-/* 赛博 + 深紫光晕主题（参考旅行 Discover 卡片层级 + Interchain 紫色氛围） */
+/* 纯黑主色 + 深蓝点缀（#165DFF 系），卡片深灰近黑 */
 
-$cyber-bg-void: #06040f;
-$cyber-bg-deep: #0a0518;
-$cyber-bg-mid: #0f0828;
+$cyber-bg-void: #000000;
+$cyber-bg-deep: #0a0a0a;
+$cyber-bg-mid: #121212;
 
-/* 霓虹主色：紫为主、青品为辅 */
-$cyber-neon-purple: #7a42f4;
-$cyber-neon-purple-soft: #a78bfa;
+/* 主题蓝（沿用部分历史变量名，避免各页大面积改名） */
+$cyber-neon-purple: #165dff;
+$cyber-neon-purple-soft: #3d7cff;
 $cyber-cyan: #00f5ff;
-$cyber-cyan-dim: rgba(0, 245, 255, 0.35);
-$cyber-magenta: #ff2ee6;
-$cyber-magenta-dim: rgba(255, 46, 230, 0.4);
-$cyber-purple: #b794f6;
-$cyber-purple-dim: rgba(167, 139, 250, 0.35);
+$cyber-cyan-dim: rgba(0, 245, 255, 0.22);
+$cyber-magenta: #0e4bcc;
+$cyber-magenta-dim: rgba(22, 93, 255, 0.32);
+$cyber-purple: #5b8fff;
+$cyber-purple-dim: rgba(22, 93, 255, 0.26);
 
-/* 卡片表面：半透明深紫玻璃 */
-$cyber-bg-panel: rgba(18, 12, 38, 0.78);
-$cyber-bg-panel-elevated: rgba(26, 18, 52, 0.88);
+/* 卡片：深灰近黑，无紫偏 */
+$cyber-bg-panel: rgba(18, 18, 18, 0.82);
+$cyber-bg-panel-elevated: rgba(26, 26, 26, 0.9);
 
-$cyber-text: #f3eeff;
-$cyber-text-muted: rgba(196, 188, 220, 0.72);
-$cyber-text-dim: rgba(148, 140, 175, 0.85);
+$cyber-text: #ffffff;
+$cyber-text-muted: #d0d0d0;
+$cyber-text-dim: #a8a8a8;
 
-/* 圆角：大图卡 / 模块壳（对标参考图 24–32px） */
+/* 圆角：大图卡 / 模块壳 */
 $cyber-radius-xl: 32rpx;
 $cyber-radius-lg: 28rpx;
 $cyber-radius-md: 22rpx;
 
+$cyber-border-subtle: rgba(255, 255, 255, 0.08);
+$cyber-accent-border: rgba(22, 93, 255, 0.28);
+$cyber-accent-glow-weak: rgba(22, 93, 255, 0.12);
+$cyber-accent-glow-mid: rgba(22, 93, 255, 0.22);
+
 /**
- * 页面背景：深紫黑底 + 底部大范围紫色光晕 + 顶部微弱辅光
+ * 页面背景：纯黑/炭黑底 + 极低透明度蓝色氛围光
  */
 @mixin cyber-bg-grid {
   background-color: $cyber-bg-deep;
   background-image:
-    radial-gradient(ellipse 130% 85% at 50% 108%, rgba(122, 66, 244, 0.42) 0%, rgba(90, 40, 180, 0.15) 42%, transparent 58%),
-    radial-gradient(ellipse 75% 55% at 92% 12%, rgba(139, 92, 246, 0.22) 0%, transparent 50%),
-    radial-gradient(ellipse 65% 45% at 8% 22%, rgba(167, 139, 250, 0.14) 0%, transparent 48%),
-    radial-gradient(ellipse 90% 40% at 50% -5%, rgba(0, 245, 255, 0.06) 0%, transparent 55%),
-    linear-gradient(175deg, #080510 0%, #0a0518 38%, #10082a 72%, #0d061f 100%);
+    radial-gradient(ellipse 130% 85% at 50% 108%, rgba(22, 93, 255, 0.1) 0%, rgba(0, 0, 0, 0.45) 42%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 92% 12%, rgba(22, 93, 255, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 65% 45% at 8% 22%, rgba(22, 93, 255, 0.04) 0%, transparent 48%),
+    radial-gradient(ellipse 90% 40% at 50% -5%, rgba(22, 93, 255, 0.035) 0%, transparent 55%),
+    linear-gradient(175deg, #000000 0%, #0a0a0a 38%, #121212 72%, #0a0a0a 100%);
 }
 
 @mixin neon-text-cyan {
   color: #d4ffff;
   text-shadow:
-    0 0 8rpx rgba(0, 245, 255, 0.65),
-    0 0 20rpx rgba(0, 245, 255, 0.35);
+    0 0 8rpx rgba(0, 245, 255, 0.55),
+    0 0 20rpx rgba(0, 245, 255, 0.28);
 }
 
 @mixin neon-text-purple {
-  color: #ebe4ff;
+  color: #ffffff;
   text-shadow:
-    0 0 10rpx rgba(167, 139, 250, 0.85),
-    0 0 28rpx rgba(122, 66, 244, 0.45);
+    0 0 10rpx rgba(22, 93, 255, 0.4),
+    0 0 28rpx rgba(22, 93, 255, 0.18);
 }
 
 @mixin neon-text-magenta {
-  color: #ffc8ff;
+  color: #ffffff;
   text-shadow:
-    0 0 6rpx $cyber-magenta,
-    0 0 16rpx rgba(255, 46, 230, 0.55);
+    0 0 6rpx rgba(22, 93, 255, 0.5),
+    0 0 16rpx rgba(22, 93, 255, 0.28);
 }
 
 @mixin neon-text-soft {
   color: $cyber-text-muted;
-  text-shadow: 0 0 10rpx rgba(167, 139, 250, 0.25);
+  text-shadow: 0 0 10rpx rgba(22, 93, 255, 0.1);
 }
 
 /* 模块外壳： Discover 式大块留白区内的圆角容器 */
 @mixin cyber-module-shell {
   border-radius: $cyber-radius-xl;
   background: $cyber-bg-panel;
-  border: 1rpx solid rgba(167, 139, 250, 0.22);
+  border: 1rpx solid $cyber-border-subtle;
   box-shadow:
-    0 8rpx 40rpx rgba(0, 0, 0, 0.35),
-    0 0 48rpx rgba(122, 66, 244, 0.12),
-    inset 0 1rpx 0 rgba(255, 255, 255, 0.06);
+    0 8rpx 40rpx rgba(0, 0, 0, 0.45),
+    0 0 48rpx $cyber-accent-glow-weak,
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
@@ -82,42 +87,42 @@ $cyber-radius-md: 22rpx;
 @mixin cyber-content-card {
   border-radius: $cyber-radius-lg;
   background: $cyber-bg-panel;
-  border: 1rpx solid rgba(122, 66, 244, 0.28);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
   box-shadow:
-    0 6rpx 28rpx rgba(0, 0, 0, 0.28),
-    0 0 36rpx rgba(122, 66, 244, 0.14),
-    inset 0 0 32rpx rgba(122, 66, 244, 0.04);
+    0 6rpx 28rpx rgba(0, 0, 0, 0.38),
+    0 0 36rpx $cyber-accent-glow-weak,
+    inset 0 0 32rpx rgba(0, 0, 0, 0.18);
   overflow: hidden;
 }
 
 @mixin glow-border-cyan {
-  border: 1rpx solid rgba(0, 245, 255, 0.45);
+  border: 1rpx solid rgba(0, 245, 255, 0.4);
   box-shadow:
-    0 0 16rpx rgba(0, 245, 255, 0.28),
-    0 0 40rpx rgba(122, 66, 244, 0.12),
-    inset 0 0 24rpx rgba(0, 245, 255, 0.05);
+    0 0 16rpx rgba(0, 245, 255, 0.22),
+    0 0 40rpx $cyber-accent-glow-weak,
+    inset 0 0 24rpx rgba(0, 245, 255, 0.04);
 }
 
 @mixin glow-border-magenta {
-  border: 1rpx solid rgba(255, 46, 230, 0.45);
+  border: 1rpx solid rgba(22, 93, 255, 0.38);
   box-shadow:
-    0 0 18rpx rgba(255, 46, 230, 0.28),
-    inset 0 0 20rpx rgba(255, 46, 230, 0.06);
+    0 0 18rpx rgba(22, 93, 255, 0.2),
+    inset 0 0 20rpx rgba(22, 93, 255, 0.05);
 }
 
 @mixin glow-border-purple {
-  border: 1rpx solid rgba(167, 139, 250, 0.4);
+  border: 1rpx solid $cyber-accent-border;
   box-shadow:
-    0 0 20rpx rgba(122, 66, 244, 0.25),
-    inset 0 0 22rpx rgba(122, 66, 244, 0.07);
+    0 0 20rpx rgba(22, 93, 255, 0.14),
+    inset 0 0 22rpx rgba(22, 93, 255, 0.05);
 }
 
-/* 顶部 Hero 图位占位（无图时的柔和紫渐变） */
+/* 顶部 Hero 图位占位（低透明度黑 / 深蓝氛围） */
 @mixin cyber-hero-placeholder {
   background: linear-gradient(
     145deg,
-    rgba(122, 66, 244, 0.35) 0%,
-    rgba(45, 24, 82, 0.65) 45%,
-    rgba(18, 12, 38, 0.9) 100%
+    rgba(22, 93, 255, 0.18) 0%,
+    rgba(0, 0, 0, 0.55) 45%,
+    rgba(18, 18, 18, 0.92) 100%
   );
 }

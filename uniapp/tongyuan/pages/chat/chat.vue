@@ -41,7 +41,7 @@
             <image v-if="item.imageUrl" class="bubble-image" :src="item.imageUrl" mode="widthFix" />
           </view>
           <view class="avatar user-avatar">
-            <wd-icon name="user" size="36rpx" color="#1a0518" />
+            <wd-icon name="user" size="36rpx" color="#d0d0d0" />
           </view>
         </template>
       </view>
@@ -55,7 +55,7 @@
         custom-input-class="cyber-chat-input-inner"
         no-border
         placeholder="有什么想聊的，尽管说~"
-        placeholder-style="color: rgba(122,143,178,0.75);"
+        placeholder-style="color: rgba(176,176,176,0.75);"
         confirm-type="send"
         clearable
         prefix-icon="chat"
@@ -421,7 +421,7 @@ function formatMultiAgentReplies(res) {
   border-radius: 999rpx;
   background: $cyber-bg-panel-elevated;
   @include glow-border-purple;
-  box-shadow: 0 8rpx 36rpx rgba(122, 66, 244, 0.15);
+  box-shadow: 0 8rpx 36rpx rgba(22, 93, 255, 0.1);
 }
 
 .room-text {
@@ -473,15 +473,15 @@ function formatMultiAgentReplies(res) {
 }
 
 .ai-avatar {
-  background: linear-gradient(145deg, $cyber-neon-purple-soft, #5b21b6);
-  border: 1rpx solid rgba(196, 181, 253, 0.85);
-  box-shadow: 0 0 22rpx rgba(122, 66, 244, 0.5);
+  background: linear-gradient(145deg, $cyber-neon-purple-soft, #0e4bcc);
+  border: 1rpx solid rgba(22, 93, 255, 0.55);
+  box-shadow: 0 0 22rpx rgba(22, 93, 255, 0.35);
 }
 
 .user-avatar {
-  background: linear-gradient(160deg, $cyber-magenta, #aa0088);
-  border: 1rpx solid rgba(255, 46, 230, 0.85);
-  box-shadow: 0 0 18rpx rgba(255, 46, 230, 0.45);
+  background: linear-gradient(160deg, #1e293b, #0f172a);
+  border: 1rpx solid rgba(22, 93, 255, 0.35);
+  box-shadow: 0 0 18rpx rgba(0, 0, 0, 0.45);
 }
 
 .message-bubble {
@@ -495,13 +495,13 @@ function formatMultiAgentReplies(res) {
 
 .ai-bubble {
   margin-left: 16rpx;
-  background: rgba(22, 14, 42, 0.92);
+  background: rgba(18, 18, 18, 0.94);
   @include glow-border-purple;
 }
 
 .user-bubble {
   margin-right: 16rpx;
-  background: rgba(40, 5, 45, 0.75);
+  background: rgba(22, 28, 40, 0.88);
   @include glow-border-magenta;
 }
 
@@ -528,10 +528,10 @@ function formatMultiAgentReplies(res) {
 }
 
 .user-text {
-  color: #ffe8ff;
+  color: #ffffff;
   text-shadow:
-    0 0 8rpx $cyber-magenta,
-    0 0 16rpx rgba(255, 46, 230, 0.5);
+    0 0 8rpx rgba(22, 93, 255, 0.35),
+    0 0 16rpx rgba(22, 93, 255, 0.18);
 }
 
 .input-bar {
@@ -541,16 +541,16 @@ function formatMultiAgentReplies(res) {
   padding: 20rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   flex-shrink: 0;
-  background: rgba(12, 8, 28, 0.94);
-  border-top: 1rpx solid rgba(167, 139, 250, 0.22);
-  box-shadow: 0 -8rpx 40rpx rgba(122, 66, 244, 0.12);
+  background: rgba(10, 10, 10, 0.96);
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8rpx 40rpx rgba(0, 0, 0, 0.35);
 }
 
 .chat-container.cyber-wot {
   :deep(.cyber-chat-input) {
     flex: 1;
     min-width: 0;
-    background: rgba(18, 12, 38, 0.92);
+    background: rgba(18, 18, 18, 0.94);
     border-radius: 999rpx;
     padding: 4rpx 8rpx 4rpx 12rpx;
     @include glow-border-purple;
@@ -566,12 +566,12 @@ function formatMultiAgentReplies(res) {
   }
 
   :deep(.wd-input__icon) {
-    color: rgba(196, 181, 253, 0.85) !important;
+    color: rgba(180, 180, 180, 0.9) !important;
   }
 
   :deep(.cyber-send-btn) {
     flex-shrink: 0;
-    box-shadow: 0 0 24rpx rgba(122, 66, 244, 0.35);
+    box-shadow: 0 0 24rpx rgba(22, 93, 255, 0.28);
   }
 
   :deep(.room-leave) {
