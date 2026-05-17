@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>同源 OmniSource 功能模块结构图</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --line: #334155;
+      --subline: #64748b;
+      --title: #1d4ed8;
+      --text: #0f172a;
+      --soft: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      width: 1600px;
+      margin: 0 auto;
+      padding: 26px 20px 40px;
+    }
+    h1 {
+      text-align: center;
+      margin: 0 0 20px;
+      font-size: 28px;
+      color: var(--title);
+    }
+    .subtitle {
+      text-align: center;
+      margin-bottom: 24px;
+      color: #475569;
+      font-size: 15px;
+    }
+    .diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      align-items: center;
+    }
+    .node {
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 14px;
+      min-width: 170px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+      font-size: 15px;
+      line-height: 1.35;
+    }
+    .root {
+      min-width: 220px;
+      font-size: 18px;
+      font-weight: 700;
+      position: relative;
+    }
+    .root::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      width: 2px;
+      height: 28px;
+      background: var(--line);
+      transform: translateX(-50%);
+    }
+    .level {
+      width: 100%;
+      display: grid;
+      gap: 14px;
+      position: relative;
+      padding-top: 18px;
+    }
+    .level-1 {
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .level-1::before {
+      content: "";
+      position: absolute;
+      left: 4%;
+      right: 4%;
+      top: 0;
+      height: 2px;
+      background: var(--line);
+    }
+    .branch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      padding-top: 18px;
+    }
+    .branch::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 18px;
+      background: var(--line);
+      transform: translateX(-50%);
+    }
+    .children {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+    }
+    .children .node {
+      min-width: 150px;
+      border-color: var(--subline);
+      font-size: 14px;
+    }
+    .flow {
+      margin-top: 28px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 14px;
+      color: #334155;
+    }
+    .flow .step {
+      background: #fff;
+      border: 1px solid var(--soft);
+      border-radius: 999px;
+      padding: 10px 14px;
+      white-space: nowrap;
+    }
+    .arrow {
+      color: var(--subline);
+      font-size: 18px;
+      margin: 0 2px;
+    }
+    .caption {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 18px;
+    }
+    .note {
+      text-align: center;
+      margin-top: 8px;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .legend {
+      margin-top: 24px;
+      padding: 14px 18px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      line-height: 1.9;
+      color: #334155;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>同源（OmniSource）系统功能模块结构图</h1>
+    <div class="subtitle">按用户可见功能与后端职责边界划分，并展示模块调用关系</div>
+
+    <div class="diagram">
+      <div class="node root">同源 OmniSource</div>
+
+      <div class="level level-1">
+        <div class="branch">
+          <div class="node">首页展示</div>
+          <div class="children">
+            <div class="node">福建地图入口</div>
+            <div class="node">非遗画廊浏览</div>
+            <div class="node">地域文化导览</div>
+          </div>
+        </div>
+
+        <div class="branch">
+          <div class="node">Agent 对话</div>
+          <div class="children">
+            <div class="node">新建聊天室</div>
+            <div class="node">历史房间切换</div>
+            <div class="node">成员增删管理</div>
+          </div>
+        </div>
+
+        <div class="branch">
+          <div class="node">知识增强</div>
+          <div class="children">
+            <div class="node">知识检索</div>
+            <div class="node">证据链展示</div>
+            <div class="node">置信度与溯源</div>
+          </div>
+        </div>
+
+        <div class="branch">
+          <div class="node">AIGC 共创</div>
+          <div class="children">
+            <div class="node">图像生成</div>
+            <div class="node">结果回流聊天</div>
+            <div class="node">创作素材沉淀</div>
+          </div>
+        </div>
+
+        <div class="branch">
+          <div class="node">扩展展示</div>
+          <div class="children">
+            <div class="node">关系图谱</div>
+            <div class="node">3D/WebGL 展示</div>
+            <div class="node">移动端浏览</div>
+          </div>
+        </div>
+
+        <div class="branch">
+          <div class="node">数据支撑</div>
+          <div class="children">
+            <div class="node">MySQL / Redis</div>
+            <div class="node">Milvus</div>
+            <div class="node">OSS 存储</div>
+          </div>
+        </div>
+
+        <div class="branch">
+          <div class="node">外部服务</div>
+          <div class="children">
+            <div class="node">千问 / Spring AI</div>
+            <div class="node">DashScope</div>
+            <div class="node">Tavily 检索</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow">
+        <span class="step">用户终端</span><span class="arrow">→</span>
+        <span class="step">前端页面</span><span class="arrow">→</span>
+        <span class="step">控制器层</span><span class="arrow">→</span>
+        <span class="step">业务服务层</span><span class="arrow">→</span>
+        <span class="step">知识 / 生成 / 存储 / 外部接口</span>
+      </div>
+
+      <div class="caption">图1 系统功能模块结构图</div>
+      <div class="note">图中展示了从用户界面到后端服务再到数据与外部能力的调用链路。</div>
+
+      <div class="legend">
+        说明：系统按职责边界划分为前端展示、实时通信、业务编排、知识增强、生成共创、数据支撑和外部服务几个部分。前端负责页面与交互，控制器负责请求接入，服务层负责模块调度，数据层负责持久化与缓存，外部服务负责大模型、对象存储与联网检索。
+      </div>
+    </div>
+  </div>
+</body>
+</html>
