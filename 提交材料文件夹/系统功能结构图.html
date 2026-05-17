@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>系统功能结构图</title>
+  <style>
+    :root {
+      --line: #4a5568;
+      --box: #ffffff;
+      --border: #2d3748;
+      --bg: #f7fafc;
+      --text: #1a202c;
+      --accent: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      width: 1400px;
+      margin: 0 auto;
+      padding: 28px 24px 40px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      margin: 0 0 24px;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+    .tree {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 26px;
+    }
+    .node {
+      min-width: 150px;
+      padding: 10px 16px;
+      text-align: center;
+      border: 2px solid var(--border);
+      background: var(--box);
+      border-radius: 6px;
+      font-size: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.04);
+    }
+    .top {
+      position: relative;
+    }
+    .top::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      width: 2px;
+      height: 36px;
+      background: var(--line);
+      transform: translateX(-50%);
+    }
+    .level-1 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      width: 100%;
+      position: relative;
+      margin-top: 12px;
+      padding-top: 18px;
+    }
+    .level-1::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 5%;
+      right: 5%;
+      height: 2px;
+      background: var(--line);
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      padding-top: 18px;
+    }
+    .col::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 2px;
+      height: 18px;
+      background: var(--line);
+      transform: translateX(-50%);
+    }
+    .sub {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+    .caption {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    .note {
+      text-align: center;
+      margin-top: 8px;
+      color: #4a5568;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>同源（OmniSource）系统功能结构图</h1>
+    <div class="tree">
+      <div class="node top">系统功能总览</div>
+
+      <div class="level-1">
+        <div class="col">
+          <div class="node">首页展示</div>
+          <div class="sub">
+            <div class="node">福建地图入口</div>
+            <div class="node">非遗画廊浏览</div>
+            <div class="node">地域文化导览</div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="node">Agent 对话</div>
+          <div class="sub">
+            <div class="node">新建聊天室</div>
+            <div class="node">历史房间切换</div>
+            <div class="node">成员增删管理</div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="node">知识增强</div>
+          <div class="sub">
+            <div class="node">知识检索</div>
+            <div class="node">证据链展示</div>
+            <div class="node">置信度与溯源</div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="node">AIGC 共创</div>
+          <div class="sub">
+            <div class="node">图像生成</div>
+            <div class="node">结果回流聊天</div>
+            <div class="node">创作素材沉淀</div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="node">扩展展示</div>
+          <div class="sub">
+            <div class="node">关系图谱</div>
+            <div class="node">3D/WebGL 展示</div>
+            <div class="node">移动端浏览</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="caption">图1 系统功能结构图</div>
+    <div class="note">用于说明同源（OmniSource）的主要功能模块及其层级关系。</div>
+  </div>
+</body>
+</html>
