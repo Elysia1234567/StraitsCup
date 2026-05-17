@@ -6,8 +6,8 @@
       :map-num="12"
       :line-width="28"
       :line-height="6"
-      color="#c4b5fd"
-      inactive-color="#948cae"
+      color="#165dff"
+      inactive-color="#a0a0a0"
       :show-scrollbar="false"
       custom-class="cyber-tabs"
     >
@@ -19,7 +19,7 @@
             <view v-for="(item, index) in filteredAgents" :key="item.agentCode || index" class="agent-card">
               <image v-if="item.avatar" class="card-cover" :src="item.avatar" mode="aspectFill" />
               <view v-else class="card-avatar-fallback">
-                <wd-icon name="user" size="40rpx" color="#061018" />
+                <wd-icon name="user" size="40rpx" color="#0a0e18" />
               </view>
               <view class="card-name">{{ item.name }}</view>
               <view class="card-code">{{ item.agentCode }}</view>
@@ -133,12 +133,12 @@ export default {
 
   :deep(.wd-tabs__nav-item.is-active .wd-tabs__nav-item-text) {
     text-shadow:
-      0 0 10rpx rgba(196, 181, 253, 0.75),
-      0 0 24rpx rgba(122, 66, 244, 0.4);
+      0 0 10rpx rgba(22, 93, 255, 0.55),
+      0 0 24rpx rgba(22, 93, 255, 0.28);
   }
 
   :deep(.wd-tabs__line) {
-    box-shadow: 0 0 14rpx rgba(167, 139, 250, 0.65);
+    box-shadow: 0 0 14rpx rgba(22, 93, 255, 0.45);
     border-radius: 3rpx;
   }
 
@@ -169,7 +169,7 @@ export default {
   height: 200rpx;
   border-radius: $cyber-radius-md;
   margin-bottom: 14rpx;
-  background: rgba(18, 12, 38, 0.95);
+  background: rgba(18, 18, 18, 0.95);
 }
 
 .card-avatar-fallback {
@@ -180,11 +180,11 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, $cyber-purple, #6b2d9e);
-  border: 1rpx solid rgba(185, 103, 255, 0.9);
+  background: linear-gradient(145deg, $cyber-purple, #0e4bcc);
+  border: 1rpx solid rgba(22, 93, 255, 0.65);
   box-shadow:
-    0 0 20rpx rgba(185, 103, 255, 0.55),
-    inset 0 0 14rpx rgba(255, 255, 255, 0.15);
+    0 0 20rpx rgba(22, 93, 255, 0.35),
+    inset 0 0 14rpx rgba(255, 255, 255, 0.12);
 }
 
 .card-name {
@@ -212,6 +212,6 @@ export default {
 }
 
 .cyber-wot :deep(.card-action) {
-  box-shadow: 0 0 20rpx rgba(122, 66, 244, 0.28);
+  box-shadow: 0 0 20rpx rgba(22, 93, 255, 0.22);
 }
 </style>

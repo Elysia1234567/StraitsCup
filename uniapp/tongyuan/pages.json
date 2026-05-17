@@ -10,7 +10,7 @@
       "path": "pages/index/index",
       "style": {
         "navigationBarTitleText": "对话列表",
-        "navigationBarBackgroundColor": "#0f0824",
+        "navigationBarBackgroundColor": "#000000",
         "navigationBarTextStyle": "white"
       }
     },
@@ -18,7 +18,7 @@
       "path": "pages/chat/chat",
       "style": {
         "navigationBarTitleText": "NEURAL CHAT",
-        "navigationBarBackgroundColor": "#0f0824",
+        "navigationBarBackgroundColor": "#000000",
         "navigationBarTextStyle": "white"
       }
     },
@@ -26,7 +26,7 @@
       "path": "pages/agent/agent",
       "style": {
         "navigationBarTitleText": "智能体矩阵",
-        "navigationBarBackgroundColor": "#0f0824",
+        "navigationBarBackgroundColor": "#000000",
         "navigationBarTextStyle": "white"
       }
     },
@@ -34,7 +34,7 @@
       "path": "pages/gallery/gallery",
       "style": {
         "navigationBarTitleText": "非遗图鉴",
-        "navigationBarBackgroundColor": "#0f0824",
+        "navigationBarBackgroundColor": "#000000",
         "navigationBarTextStyle": "white"
       }
     },
@@ -42,15 +42,15 @@
       "path": "pages/dev-api/dev-api",
       "style": {
         "navigationBarTitleText": "接口实验室",
-        "navigationBarBackgroundColor": "#0f0824",
+        "navigationBarBackgroundColor": "#000000",
         "navigationBarTextStyle": "white"
       }
     }
   ],
   "tabBar": {
-    "color": "#7c7395",
-    "selectedColor": "#c4b5fd",
-    "backgroundColor": "#0f0824",
+    "color": "#a0a0a0",
+    "selectedColor": "#165dff",
+    "backgroundColor": "#000000",
     "borderStyle": "white",
     "list": [
       {
@@ -80,10 +80,10 @@
     ]
   },
   "globalStyle": {
-    "navigationBarBackgroundColor": "#0f0824",
+    "navigationBarBackgroundColor": "#000000",
     "navigationBarTextStyle": "white",
     "navigationBarTitleText": "CYBER",
-    "backgroundColor": "#06040f"
+    "backgroundColor": "#0a0a0a"
   },
   "sitemapLocation": "sitemap.json"
 }

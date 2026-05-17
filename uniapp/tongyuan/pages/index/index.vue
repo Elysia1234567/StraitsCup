@@ -3,7 +3,7 @@
     <!-- Discover 式顶部：插画位 + 标题区 -->
     <view class="hero-card">
       <view class="hero-visual">
-        <wd-icon name="chat" size="56rpx" color="rgba(196,181,253,0.95)" />
+        <wd-icon name="chat" size="56rpx" color="rgba(61,124,255,0.95)" />
       </view>
       <view class="hero-copy">
         <text class="hero-kicker">OmniSource · 同源</text>
@@ -144,7 +144,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1rpx solid rgba(167, 139, 250, 0.15);
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.08);
 }
 
 .hero-copy {
@@ -179,8 +179,8 @@ export default {
 
 .cyber-wot :deep(.hero-cta) {
   box-shadow:
-    0 8rpx 32rpx rgba(122, 66, 244, 0.45),
-    0 0 48rpx rgba(167, 139, 250, 0.25);
+    0 8rpx 32rpx rgba(22, 93, 255, 0.35),
+    0 0 48rpx rgba(22, 93, 255, 0.18);
 }
 
 .module-shell {
@@ -247,14 +247,14 @@ export default {
   }
 
   :deep(.wd-cell__icon) {
-    filter: drop-shadow(0 0 8rpx rgba(167, 139, 250, 0.55));
+    filter: drop-shadow(0 0 8rpx rgba(22, 93, 255, 0.4));
   }
 
   :deep(.cyber-fab-btn) {
     min-width: 240rpx;
     box-shadow:
-      0 0 28rpx rgba(122, 66, 244, 0.35),
-      0 0 56rpx rgba(167, 139, 250, 0.12);
+      0 0 28rpx rgba(22, 93, 255, 0.28),
+      0 0 56rpx rgba(22, 93, 255, 0.1);
   }
 }
 
