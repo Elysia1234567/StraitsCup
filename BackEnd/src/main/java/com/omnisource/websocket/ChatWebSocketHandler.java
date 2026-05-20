@@ -74,7 +74,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     boolean respondAll = wsMsg.getMetadata() != null
                             && (Boolean.TRUE.equals(wsMsg.getMetadata().get("respondAll"))
                             || Boolean.TRUE.equals(wsMsg.getMetadata().get("mentionAll")));
-                    agentChatService.handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled, respondAll);
+                    String targetAgentCode = valueAsString(wsMsg.getMetadata() == null
+                            ? null
+                            : wsMsg.getMetadata().get("targetAgentCode"));
+                    agentChatService.handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled, respondAll, targetAgentCode);
                 }
                 default -> log.debug("未处理的消息类型: {}", wsMsg.getType());
             }
@@ -136,5 +139,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
         }
         return null;
+    }
+
+    private String valueAsString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = value.toString().trim();
+        return text.isBlank() ? null : text;
     }
 }

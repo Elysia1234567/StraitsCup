@@ -65,18 +65,24 @@ public class AgentChatServiceImpl implements AgentChatService {
 
     @Override
     public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl, boolean searchEnabled) {
-        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, true, false);
+        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, true, false, null);
     }
 
     @Override
     public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl,
                                   boolean searchEnabled, boolean ragEnabled) {
-        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled, false);
+        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled, false, null);
     }
 
     @Override
     public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl,
                                   boolean searchEnabled, boolean ragEnabled, boolean respondAll) {
+        handleUserMessage(roomId, userId, content, imageUrl, searchEnabled, ragEnabled, respondAll, null);
+    }
+
+    @Override
+    public void handleUserMessage(Long roomId, Long userId, String content, String imageUrl,
+                                  boolean searchEnabled, boolean ragEnabled, boolean respondAll, String targetAgentCode) {
         ChatMessage userMsg = new ChatMessage();
         userMsg.setRoomId(roomId);
         userMsg.setMessageType(imageUrl != null ? "IMAGE" : "TEXT");
@@ -105,11 +111,15 @@ public class AgentChatServiceImpl implements AgentChatService {
         String searchResult = searchEnabled ? tavilySearchService.searchAndFormat(content) : null;
         String finalSearchResult = searchResult;
         boolean finalRagEnabled = ragEnabled;
-        List<Agent> responders = allAgentsMentioned
+        Agent targetAgent = findAgentByCode(allAgents, targetAgentCode);
+        List<Agent> responders = targetAgent != null
+                ? List.of(targetAgent)
+                : allAgentsMentioned
                 ? allAgents
                 : agentOrchestrator.selectRespondingAgents(roomId, content, allAgents);
-        log.info("Chat room {} selected {} agents, freeDiscussion={}, allAgents={}",
-                roomId, responders.size(), freeDiscussion, allAgentsMentioned);
+        boolean targetOnly = targetAgent != null;
+        log.info("Chat room {} selected {} agents, freeDiscussion={}, allAgents={}, targetAgent={}",
+                roomId, responders.size(), freeDiscussion, allAgentsMentioned, targetAgentCode);
 
         Map<String, String> streamIds = new LinkedHashMap<>();
         for (int i = 0; i < responders.size(); i++) {
@@ -124,7 +134,7 @@ public class AgentChatServiceImpl implements AgentChatService {
             String streamId = streamIds.get(agent.getAgentCode());
             agentExecutor.submit(() -> {
                 try {
-                    processAgentResponse(roomId, agent, streamId, content, imageUrl, finalSearchResult, finalRagEnabled, freeDiscussion);
+                    processAgentResponse(roomId, agent, streamId, content, imageUrl, finalSearchResult, finalRagEnabled, freeDiscussion && !targetOnly);
                 } catch (Exception e) {
                     log.error("Agent response failed: agent={}", agent.getAgentCode(), e);
                 }
@@ -426,6 +436,16 @@ public class AgentChatServiceImpl implements AgentChatService {
             }
         }
         return agents;
+    }
+
+    private Agent findAgentByCode(List<Agent> agents, String agentCode) {
+        if (agentCode == null || agentCode.isBlank()) {
+            return null;
+        }
+        return agents.stream()
+                .filter(agent -> agentCode.equals(agent.getAgentCode()))
+                .findFirst()
+                .orElse(null);
     }
 
     private ChatMessage saveAgentMessage(Long roomId, Agent agent, String streamId, String content,

@@ -40,12 +40,17 @@ const bootError = ref('');
 const roomInsight = ref(null);
 const loadingInsight = ref(false);
 const selectedAgentCodes = ref(new Set());
+const composerInputRef = ref(null);
 const inputText = ref('');
 const mentionAll = ref(true);
+const mentionMenuOpen = ref(false);
+const mentionQuery = ref('');
+const mentionedAgent = ref(null);
 const searchEnabled = ref(true);
 const attachmentInput = ref(null);
 const attachment = ref(null);
 const attachmentUploading = ref(false);
+const imageGenerating = ref(false);
 const chatScrollRef = ref(null);
 let insightRefreshTimer = null;
 
@@ -330,6 +335,20 @@ const availableAgentsToAdd = computed(() =>
   catalogAgents.value.filter((agent) => !currentRoomAgentCodes.value.has(agent.agentCode)),
 );
 
+const mentionAgentOptions = computed(() => {
+  const query = mentionQuery.value.trim().toLowerCase();
+  const agents = previewAgents.value;
+  if (!query) {
+    return agents;
+  }
+  return agents.filter((agent) => {
+    const name = (agent.name || '').toLowerCase();
+    const code = (agent.agentCode || '').toLowerCase();
+    const tag = (agent.tag || '').toLowerCase();
+    return name.includes(query) || code.includes(query) || tag.includes(query);
+  });
+});
+
 const remainingRoomAgentSlots = computed(() => Math.max(0, 6 - roomChatAgents.value.length));
 
 const selectedCount = computed(() => selectedAgentCodes.value.size);
@@ -577,6 +596,76 @@ function clearAttachment() {
   attachment.value = null;
 }
 
+function extractMentionQuery(text) {
+  const match = text.match(/(?:^|\s)@([^\s@]*)$/);
+  return match ? match[1] : null;
+}
+
+function handleComposerInput() {
+  const query = extractMentionQuery(inputText.value);
+  mentionQuery.value = query || '';
+  mentionMenuOpen.value = query !== null && previewAgents.value.length > 0;
+  if (mentionedAgent.value && !inputText.value.includes(`@${mentionedAgent.value.name}`)) {
+    mentionedAgent.value = null;
+  }
+}
+
+function handleComposerKeydown(event) {
+  if (event.key === 'Escape' && mentionMenuOpen.value) {
+    event.preventDefault();
+    mentionMenuOpen.value = false;
+  }
+}
+
+function chooseMentionAgent(agent) {
+  if (!agent?.agentCode) return;
+  const label = `@${agent.name || agent.agentCode}`;
+  inputText.value = inputText.value.replace(/(?:^|\s)@[^\s@]*$/, (match) => {
+    const prefix = match.startsWith(' ') ? ' ' : '';
+    return `${prefix}${label} `;
+  });
+  mentionedAgent.value = agent;
+  mentionMenuOpen.value = false;
+  mentionQuery.value = '';
+  nextTick(() => composerInputRef.value?.focus());
+}
+
+function buildImageDownloadName(message, index) {
+  const rawName = message?.senderName || message?.senderId || 'agent-image';
+  const safeName = String(rawName).replace(/[\\/:*?"<>|]/g, '_').slice(0, 32) || 'agent-image';
+  return `${safeName}-${message?.messageId || message?.id || index || Date.now()}.png`;
+}
+
+async function handleImageDownload(imageUrl, message, index) {
+  if (!imageUrl) return;
+  const filename = buildImageDownloadName(message, index);
+
+  try {
+    const response = await fetch(imageUrl, { mode: 'cors' });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+}
+
 function handleSendMessage() {
   const text = inputText.value.trim();
   const imageUrl = attachment.value?.url || null;
@@ -594,12 +683,57 @@ function handleSendMessage() {
   sendUserMessage(text, {
     searchEnabled: searchEnabled.value,
     ragEnabled: searchEnabled.value,
-    respondAll: mentionAll.value,
+    respondAll: mentionedAgent.value ? false : mentionAll.value,
+    targetAgentCode: mentionedAgent.value?.agentCode || null,
     imageUrl,
   });
   inputText.value = '';
+  mentionedAgent.value = null;
+  mentionMenuOpen.value = false;
   clearAttachment();
   scrollToBottom();
+}
+
+async function handleGenerateImage() {
+  const prompt = inputText.value.trim();
+  if (!currentRoomId.value) {
+    bootError.value = '请先创建或选择一个群聊房间。';
+    return;
+  }
+  if (!prompt) {
+    bootError.value = '请先在输入框写一句生图描述。';
+    return;
+  }
+  if (attachmentUploading.value) {
+    bootError.value = '图片仍在上传，请稍后再生图。';
+    return;
+  }
+
+  const agent = previewAgents.value[0];
+  if (!agent?.agentCode) {
+    bootError.value = '当前房间没有可用于生图的 Agent。';
+    return;
+  }
+
+  imageGenerating.value = true;
+  bootError.value = '';
+  try {
+    await chatApi.generateAgentImage({
+      userId: 1,
+      roomId: currentRoomId.value,
+      prompt,
+      style: '水墨',
+      agentCode: agent.agentCode,
+    });
+    inputText.value = '';
+    clearAttachment();
+    scrollToBottom();
+    scheduleRoomInsightRefresh();
+  } catch (error) {
+    bootError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    imageGenerating.value = false;
+  }
 }
 
 function handleQuickCreate() {
@@ -793,6 +927,9 @@ function scheduleRoomInsightRefresh() {
 }
 
 watch(currentRoomId, (roomId) => {
+  mentionedAgent.value = null;
+  mentionMenuOpen.value = false;
+  mentionQuery.value = '';
   if (roomId != null) {
     localStorage.setItem(LAST_ROOM_KEY, String(roomId));
   } else {
@@ -985,7 +1122,12 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
                   <div v-if="message.imageUrl" class="message-image">
-                    <img :src="message.imageUrl" alt="上传图片" />
+                    <img
+                      :src="message.imageUrl"
+                      alt="上传图片"
+                      title="双击下载图片"
+                      @dblclick="handleImageDownload(message.imageUrl, message, index)"
+                    />
                   </div>
                   <p class="message-text">{{ message.content }}</p>
                 </article>
@@ -1018,7 +1160,12 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div v-if="message.imageUrl" class="message-image assistant-image">
-                      <img :src="message.imageUrl" alt="Agent 图片" />
+                      <img
+                        :src="message.imageUrl"
+                        alt="Agent 图片"
+                        title="双击下载图片"
+                        @dblclick="handleImageDownload(message.imageUrl, message, index)"
+                      />
                     </div>
 
                     <p class="message-text">{{ message.content }}</p>
@@ -1045,13 +1192,41 @@ onBeforeUnmount(() => {
         <footer class="composer-shell">
           <div class="composer">
             <textarea
+              ref="composerInputRef"
               v-model="inputText"
               class="composer-input scrollbar-track-transparent"
               rows="1"
               :disabled="!currentRoomId || loadingMessages || !wsConnected"
               :placeholder="currentRoomId ? '输入您想了解的非遗问题，或 @ 某个 Agent 提问...' : '请先创建或选择一个群聊房间'"
+              @input="handleComposerInput"
+              @keydown="handleComposerKeydown"
               @keydown.enter.exact.prevent="handleSendMessage"
             />
+
+            <div v-if="mentionMenuOpen" class="mention-menu">
+              <button
+                v-for="agent in mentionAgentOptions"
+                :key="agent.agentCode"
+                class="mention-option"
+                type="button"
+                @mousedown.prevent="chooseMentionAgent(agent)"
+              >
+                <img class="mention-avatar" :src="agent.avatar || '/logo.svg'" :alt="agent.name" />
+                <span class="mention-copy">
+                  <span class="mention-name">{{ agent.name }}</span>
+                  <span class="mention-tag">{{ agent.tag || agent.agentCode }}</span>
+                </span>
+              </button>
+              <div v-if="mentionAgentOptions.length === 0" class="mention-empty">没有匹配的 Agent</div>
+            </div>
+
+            <div v-if="mentionedAgent" class="target-agent-chip">
+              <AtSymbolIcon class="icon-xs" />
+              <span>只问 {{ mentionedAgent.name }}</span>
+              <button class="chip-close" type="button" @click="mentionedAgent = null">
+                <XMarkIcon class="icon-xs" />
+              </button>
+            </div>
 
             <div v-if="attachment" class="attachment-chip">
               <PhotoIcon class="icon-xs" />
@@ -1081,6 +1256,16 @@ onBeforeUnmount(() => {
               >
                 <PhotoIcon class="icon-xs" />
                 <span>上传图片</span>
+              </button>
+
+              <button
+                class="chip-btn image-gen-btn"
+                type="button"
+                :disabled="!currentRoomId || loadingMessages || !wsConnected || imageGenerating || !inputText.trim()"
+                @click="handleGenerateImage"
+              >
+                <SparklesIcon class="icon-xs" />
+                <span>{{ imageGenerating ? '生图中' : 'AI 生图' }}</span>
               </button>
 
               <button
@@ -2119,8 +2304,9 @@ export default {
 .message-image img {
   display: block;
   width: 100%;
-  max-height: 260px;
-  object-fit: cover;
+  height: auto;
+  max-height: min(70vh, 720px);
+  object-fit: contain;
 }
 
 .mini-evidence {
@@ -2151,10 +2337,81 @@ export default {
 }
 
 .composer {
+  position: relative;
   border: 1px solid rgba(89, 162, 255, 0.22);
   border-radius: 8px;
   background: rgba(7, 16, 31, 0.86);
   padding: 10px;
+}
+
+.mention-menu {
+  position: absolute;
+  right: 10px;
+  bottom: calc(100% - 2px);
+  z-index: 8;
+  width: min(340px, calc(100% - 20px));
+  overflow: hidden;
+  border: 1px solid rgba(121, 190, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(8, 18, 34, 0.98);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+}
+
+.mention-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid rgba(126, 184, 255, 0.1);
+  background: transparent;
+  padding: 10px 12px;
+  color: #eaf6ff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mention-option:hover {
+  background: rgba(32, 70, 118, 0.86);
+}
+
+.mention-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(143, 202, 255, 0.24);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mention-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.mention-name,
+.mention-tag {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-name {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mention-tag {
+  color: rgba(211, 230, 255, 0.58);
+  font-size: 12px;
+}
+
+.mention-empty {
+  padding: 12px;
+  color: rgba(211, 230, 255, 0.58);
+  font-size: 12px;
 }
 
 .composer-input {
@@ -2189,6 +2446,20 @@ export default {
   background: rgba(15, 29, 53, 0.9);
   padding: 4px 8px;
   color: rgba(234, 246, 255, 0.88);
+  font-size: 12px;
+}
+
+.target-agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin-top: 8px;
+  border: 1px solid rgba(121, 221, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(30, 82, 116, 0.38);
+  padding: 4px 8px;
+  color: #dff7ff;
   font-size: 12px;
 }
 

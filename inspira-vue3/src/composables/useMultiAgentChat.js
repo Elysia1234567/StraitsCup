@@ -312,7 +312,7 @@ export function useMultiAgentChat() {
     return room;
   }
 
-  function sendUserMessage(text, { searchEnabled = false, ragEnabled = true, respondAll = false, imageUrl = null } = {}) {
+  function sendUserMessage(text, { searchEnabled = false, ragEnabled = true, respondAll = false, imageUrl = null, targetAgentCode = null } = {}) {
     if (!ws.value || ws.value.readyState !== WebSocket.OPEN || !currentRoomId.value) {
       wsError.value = '未连接到聊天室';
       return;
@@ -337,7 +337,8 @@ export function useMultiAgentChat() {
       metadata: {
         searchEnabled,
         ragEnabled,
-        respondAll,
+        respondAll: targetAgentCode ? false : respondAll,
+        targetAgentCode,
       },
     };
     ws.value.send(JSON.stringify(payload));

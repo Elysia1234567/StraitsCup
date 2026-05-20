@@ -25,6 +25,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.ByteArrayInputStream;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -240,7 +241,7 @@ public class ImageGenerationServiceImpl implements ImageGenerationService {
 
         String targetFolder = buildRoomAgentImageFolder(task.getRoomId());
         try {
-            byte[] imageBytes = restTemplate.getForObject(generatedImageUrl, byte[].class);
+            byte[] imageBytes = restTemplate.getForObject(URI.create(generatedImageUrl), byte[].class);
             if (imageBytes == null || imageBytes.length == 0) {
                 throw new IllegalStateException("Generated image download returned empty content");
             }
@@ -252,7 +253,8 @@ public class ImageGenerationServiceImpl implements ImageGenerationService {
             log.info("Agent generated image uploaded to OSS folder: {}", targetFolder);
             return uploadedUrl;
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to upload generated image to OSS: " + e.getMessage(), e);
+            log.warn("Failed to archive generated image to OSS, fallback to provider url: {}", e.getMessage());
+            return generatedImageUrl;
         }
     }
 
